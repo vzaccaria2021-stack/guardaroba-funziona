@@ -30,9 +30,11 @@
             let res = document.getElementById('risultato');
             if (!nome) { res.innerHTML = '<p style="color:red;">Scrivi un nome!</p>'; return; }
             if (disponibili.length === 0) { res.innerHTML = '<p style="color:red;">SOLD OUT!</p>'; return; }
-            let num = disponibili[Math.floor(Math.random() * disponibili.length)];
+            // Assegna il numero più basso disponibile (sequenziale)
+            disponibili.sort((a, b) => parseInt(a) - parseInt(b)); // Ordina numericamente
+            let num = disponibili[0];
             prenotazioni[num] = nome;
-            disponibili = disponibili.filter(d => d !== num);
+            disponibili.shift(); // Rimuovi il primo (più basso)
             localStorage.setItem('prenotazioni2025', JSON.stringify(prenotazioni));
             res.innerHTML = `<p>Congrats <b>${nome}</b>!</p>`;
             document.getElementById('numero').textContent = num;
