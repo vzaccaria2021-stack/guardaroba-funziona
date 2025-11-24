@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GuardaroBa Prenotato</title>
+    <style>
+        body { background: linear-gradient(135deg, #1a0033, #000); color: #fff; font-family: Arial; text-align: center; padding: 50px; }
+        h1 { color: #ff00aa; font-size: 3em; }
+        input, button { padding: 15px; margin: 10px; font-size: 1.2em; border: none; border-radius: 25px; }
+        input { background: rgba(255,255,255,0.2); color: white; width: 80%; }
+        button { background: #ff00aa; color: white; cursor: pointer; }
+        .numero { font-size: 5em; color: #ff00aa; margin: 20px; }
+    </style>
+</head>
+<body>
+    <h1>Guardaro<span style="color:#ff00aa;">Ba</span> Prenotato</h1>
+    <p>Prenota il tuo numero!</p>
+    <input type="text" id="nome" placeholder="Il tuo nome/nickname">
+    <br>
+    <button onclick="prenota()">PRENOTA</button>
+    <div id="risultato"></div>
+    <div id="numero" class="numero" style="display:none;"></div>
+
+    <script>
+        let prenotazioni = JSON.parse(localStorage.getItem('prenotazioni2025') || '{}');
+        let disponibili = Array.from({length:100}, (_,i) => String(i+1).padStart(3,'0')).filter(n => !prenotazioni[n]);
+        function prenota() {
+            let nome = document.getElementById('nome').value.trim();
+            let res = document.getElementById('risultato');
+            if (!nome) { res.innerHTML = '<p style="color:red;">Scrivi un nome!</p>'; return; }
+            if (disponibili.length === 0) { res.innerHTML = '<p style="color:red;">SOLD OUT!</p>'; return; }
+            let num = disponibili[Math.floor(Math.random() * disponibili.length)];
+            prenotazioni[num] = nome;
+            disponibili = disponibili.filter(d => d !== num);
+            localStorage.setItem('prenotazioni2025', JSON.stringify(prenotazioni));
+            res.innerHTML = `<p>Congrats <b>${nome}</b>!</p>`;
+            document.getElementById('numero').textContent = num;
+            document.getElementById('numero').style.display = 'block';
+            document.getElementById('nome').value = '';
+        }
+    </script>
+</body>
+</html>
