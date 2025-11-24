@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GuardaroBa Admin</title>
+    <style>
+        body { background: linear-gradient(135deg, #1a0033, #000); color: #fff; font-family: Arial; text-align: center; padding: 50px; }
+        h1 { color: #ff00aa; font-size: 3em; }
+        input, button { padding: 15px; margin: 10px; font-size: 1.2em; border: none; border-radius: 25px; }
+        input { background: rgba(255,255,255,0.2); color: white; width: 80%; }
+        button { background: #ff00aa; color: white; cursor: pointer; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { border: 1px solid #ff00aa; padding: 10px; text-align: left; }
+        th { background: #ff00aa; }
+    </style>
+</head>
+<body>
+    <h1>🔐 GuardaroBa Admin</h1>
+    <input type="password" id="pass" placeholder="Password">
+    <br>
+    <button onclick="login()">ENTRA</button>
+    <div id="tabella" style="display:none;"></div>
+    <button onclick="reset()" style="background:red; display:none;" id="reset">RESET</button>
+
+    <script>
+        const PASS = "discoteca2025";
+        let prenotazioni = JSON.parse(localStorage.getItem('prenotazioni2025') || '{}');
+        function login() {
+            if (document.getElementById('pass').value === PASS) {
+                document.getElementById('tabella').style.display = 'block';
+                document.getElementById('reset').style.display = 'block';
+                mostraTabella();
+            } else {
+                alert("Password sbagliata!");
+            }
+        }
+        function mostraTabella() {
+            let html = '<table><tr><th>Numero</th><th>Persona</th></tr>';
+            Object.keys(prenotazioni).sort().forEach(num => {
+                html += `<tr><td>${num}</td><td>${prenotazioni[num]}</td></tr>`;
+            });
+            html += '</table><p>Posti liberi: ' + (100 - Object.keys(prenotazioni).length) + '</p>';
+            document.getElementById('tabella').innerHTML = html;
+        }
+        function reset() {
+            if (confirm("Sicuro?")) {
+                localStorage.removeItem('prenotazioni2025');
+                location.reload();
+            }
+        }
+    </script>
+</body>
+</html>
