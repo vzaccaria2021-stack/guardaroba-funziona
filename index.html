@@ -22,10 +22,10 @@
     <div id="risultato"></div>
     <div id="numero" class="numero" style="display:none;"></div>
     <script type="module">
-        // Import per Firebase App e Firestore
-        import { initializeApp } from "firebase/app";
-        import { getAnalytics } from "firebase/analytics";
-        import { getFirestore, collection, query, orderBy, limit, getDocs, addDoc } from "firebase/firestore";
+        // Import con URL CDN completi
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js';
+        import { getAnalytics } from 'https://www.gstatic.com/firebasejs/12.6.0/firebase-analytics.js';
+        import { getFirestore, collection, query, orderBy, limit, getDocs, addDoc } from 'https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js';
 
         // Configurazione Firebase
         const firebaseConfig = {
@@ -43,8 +43,8 @@
         const analytics = getAnalytics(app);
         const db = getFirestore(app);  // Inizializza Firestore
 
-        // Funzione prenota
-        window.prenota = async function() {  // Rendi globale per onclick
+        // Funzione prenota (resa globale)
+        window.prenota = async function() {
             let nome = document.getElementById('nome').value.trim();
             let res = document.getElementById('risultato');
             if (!nome) { 
