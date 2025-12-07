@@ -5,29 +5,46 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GuardaroBa Prenotato</title>
     <style>
-        body { background: linear-gradient(135deg, #1a0033, #000); color: #fff; font-family: Arial; text-align: center; padding: 50px; }
-        h1 { color: #ff00aa; font-size: 3em; }
-        input, button { padding: 15px; margin: 10px; font-size: 1.2em; border: none; border-radius: 25px; }
-        input { background: rgba(255,255,255,0.2); color: white; width: 80%; }
+        body { background: linear-gradient(135deg, #1a0033, #000); color: #fff; font-family: Arial; text-align: center; padding: 50px; margin:0; }
+        h1 { color: #ff00aa; font-size: 3em; margin:20px; }
+        input, button { padding: 18px; margin: 12px; font-size: 1.4em; border: none; border-radius: 30px; }
+        input { background: rgba(255,255,255,0.2); color: white; width: 85%; }
         button { background: #ff00aa; color: white; cursor: pointer; }
-        .numero { font-size: 5em; color: #ff00aa; margin: 20px; }
+        #whatsappBtn { background: #25D366; padding: 20px 50px; font-size: 1.8em; margin: 30px; border-radius: 50px; }
+        .numero { font-size: 8em; color: #ff00aa; margin: 20px; font-weight: bold; }
+        #biglietto { background: linear-gradient(45deg, #ff00aa, #ff3399); padding: 40px; border-radius: 25px; margin: 30px auto; max-width: 420px; box-shadow: 0 0 40px #ff00aa; }
+        #qrcode { margin: 30px auto; }
+        .info { font-size: 2em; margin: 15px; }
     </style>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode.js@1.0.0/qrcode.min.js"></script>
 </head>
 <body>
     <h1>Guardaro<span style="color:#ff00aa;">Ba</span> Prenotato</h1>
-    <p>Prenota il tuo numero!</p>
-    <input type="text" id="nome" placeholder="Il tuo nome/nickname">
+    <p style="font-size:1.5em;">Prenota il tuo numero!</p>
+
+    <input type="text" id="nome" placeholder="Il tuo nome o nickname">
     <br>
     <button onclick="prenota()">PRENOTA</button>
+    
     <div id="risultato"></div>
-    <div id="numero" class="numero" style="display:none;"></div>
+    
+    <div id="biglietto" style="display:none;">
+        <h2 style="font-size:2.2em;">Biglietto VIP</h2>
+        <div class="info" id="nomeBiglietto"></div>
+        <div class="numero" id="numeroBiglietto"></div>
+        <div id="qrcode"></div>
+        
+        <p style="font-size:1.6em; margin:30px;">Fai screenshot o invia su WhatsApp</p>
+        
+        <button id="whatsappBtn" onclick="inviaWhatsApp()">
+            INVIA SU WHATSAPP
+        </button>
+    </div>
+
     <script type="module">
-        // Import con URL CDN completi
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js';
-        import { getAnalytics } from 'https://www.gstatic.com/firebasejs/12.6.0/firebase-analytics.js';
         import { getFirestore, collection, query, orderBy, limit, getDocs, addDoc } from 'https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js';
 
-        // Configurazione Firebase
         const firebaseConfig = {
             apiKey: "AIzaSyCclXJ4lqgL2dZCZfzD9uVdai0RuFziERQ",
             authDomain: "guardaroba-prenotato.firebaseapp.com",
@@ -38,40 +55,58 @@
             measurementId: "G-P3XK7XW7EL"
         };
 
-        // Inizializza Firebase
         const app = initializeApp(firebaseConfig);
-        const analytics = getAnalytics(app);
-        const db = getFirestore(app);  // Inizializza Firestore
+        const db = getFirestore(app);
 
-        // Funzione prenota (resa globale)
+        let nomeGlobale = "";
+        let numeroGlobale = "";
+
         window.prenota = async function() {
             let nome = document.getElementById('nome').value.trim();
             let res = document.getElementById('risultato');
             if (!nome) { 
-                res.innerHTML = '<p style="color:red;">Scrivi un nome!</p>'; 
+                res.innerHTML = '<p style="color:red; font-size:1.8em;">Scrivi un nome!</p>'; 
                 return; 
             }
+
             const q = query(collection(db, "prenotazioni"), orderBy("numero", "desc"), limit(1));
-            const querySnapshot = await getDocs(q);
-            let ultimoNumero = 0;
-            if (!querySnapshot.empty) {
-                ultimoNumero = querySnapshot.docs[0].data().numero;
-            }
-            const nuovoNumero = ultimoNumero + 1;
+            const snapshot = await getDocs(q);
+            let ultimo = 0;
+            if (!snapshot.empty) ultimo = snapshot.docs[0].data().numero;
+            const nuovoNumero = ultimo + 1;
             if (nuovoNumero > 100) { 
-                res.innerHTML = '<p style="color:red;">SOLD OUT!</p>'; 
+                res.innerHTML = '<p style="color:red; font-size:2.5em;">SOLD OUT!</p>'; 
                 return; 
             }
+
             const num = String(nuovoNumero).padStart(3, '0');
+            nomeGlobale = nome.toUpperCase();
+            numeroGlobale = num;
+
             await addDoc(collection(db, "prenotazioni"), { 
                 numero: nuovoNumero, 
                 nome: nome, 
                 timestamp: new Date() 
             });
-            res.innerHTML = `<p>Congratulazioni <b>${nome}</b>!</p>`;
-            document.getElementById('numero').textContent = num;
-            document.getElementById('numero').style.display = 'block';
-            document.getElementById('nome').value = '';
+
+            document.querySelectorAll('input, button:first-of-type, #risultato').forEach(el => el.style.display = 'none');
+            document.getElementById('biglietto').style.display = 'block';
+            document.getElementById('nomeBiglietto').textContent = nomeGlobale;
+            document.getElementById('numeroBiglietto').textContent = numeroGlobale;
+
+            document.getElementById("qrcode").innerHTML = "";
+            new QRCode(document.getElementById("qrcode"), {
+                text: numeroGlobale,
+                width: 280,
+                height: 280,
+                colorDark : "#ff00aa",
+                colorLight : "#000000"
+            });
+        }
+
+        window.inviaWhatsApp = function() {
+            const testo = encodeURIComponent(`*GUARDAROBA PRENOTATO*\n\nNome: ${nomeGlobale}\nNumero: ${numeroGlobale}\n\nMostra questo messaggio all'ingresso!\nBuona serata 🔥`);
+            window.open(`https://wa.me/?text=${testo}`, '_blank');
         }
     </script>
 </body>
