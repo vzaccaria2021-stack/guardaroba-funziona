@@ -1,110 +1,68 @@
-<!DOCTYPE html>
-<html lang="it">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🔐 GuardaroBa Admin</title>
-    <style>
-        body { background: linear-gradient(135deg, #1a0033, #000); color: #fff; font-family: Arial; text-align: center; padding: 50px; }
-        h1 { color: #ff00aa; font-size: 3em; }
-        input, button { padding: 15px; margin: 10px; font-size: 1.2em; border: none; border-radius: 25px; }
-        input { background: rgba(255,255,255,0.2); color: white; width: 80%; }
-        button { background: #ff00aa; color: white; cursor: pointer; }
-        button#reset { background: red !important; padding: 20px 40px !important; font-size: 1.8em !important; margin: 40px; }
-        table { width: 90%; max-width: 600px; border-collapse: collapse; margin: 40px auto; }
-        th, td { border: 2px solid #ff00aa; padding: 15px; text-align: center; font-size: 1.3em; }
-        th { background: #ff00aa; color: black; }
-        .posti { font-size: 2.5em; color: #ff00aa; margin: 30px; }
-    </style>
-</head>
-<body>
-    <h1>🔐 Guardaro<span style="color:#ff00aa;">Ba</span> Admin</h1>
-    
-    <div id="login">
-        <input type="password" id="pass" placeholder="Password">
-        <br>
-        <button onclick="login()">ENTRA</button>
-    </div>
+<video id="video" width="300" height="200" autoplay style="display:none;"></video>
+<canvas id="canvas" style="display:none;"></canvas>
+<button onclick="avviaScanner()">Scansiona QR per Ritirare</button>
 
-    <div id="contenuto" style="display:none;">
-        <h2 style="font-size:2.5em;">Lista prenotazioni (in tempo reale)</h2>
-        <div id="tabella"></div>
-        <p class="posti" id="posti">Posti liberi: 100</p>
-        <button onclick="reset()" id="reset">RESET TOTALE</button>
-    </div>
+<script>
+  // Assumi db (Firestore) inizializzato
 
-    <script type="module">
-        import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js';
-        import { getFirestore, collection, query, orderBy, onSnapshot, getDocs, deleteDoc, doc } from 'https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js';
+  // Modifica il listener della lista per mostrare status e messaggio
+  db.collection('prenotazioni').orderBy('timestamp', 'desc').onSnapshot(snapshot => {
+    const lista = document.getElementById('listaPrenotazioni'); // Assumi ID esistente per la lista
+    lista.innerHTML = '';
+    let postiOccupati = 0;
+    snapshot.forEach(doc => {
+      const data = doc.data();
+      const li = document.createElement('li');
+      li.textContent = `${doc.id} - ${data.nome} - Status: ${data.status}`;
+      if (data.status === 'ritirato') {
+        li.textContent += ' - Il capo è stato ritirato!';
+        li.style.color = 'green'; // Opzionale: stile per evidenziare
+      } else {
+        postiOccupati++;
+      }
+      lista.appendChild(li);
+    });
+    // Aggiorna posti liberi (assumi max 100)
+    document.getElementById('postiLiberi').textContent = `Posti liberi: ${100 - postiOccupati}`; // Assumi ID esistente
+  });
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyCclXJ4lqgL2dZCZfzD9uVdai0RuFziERQ",
-            authDomain: "guardaroba-prenotato.firebaseapp.com",
-            projectId: "guardaroba-prenotato",
-            storageBucket: "guardaroba-prenotato.firebasestorage.app",
-            messagingSenderId: "994569794036",
-            appId: "1:994569794036:web:445da2dd598745585a49a1",
-            measurementId: "G-P3XK7XW7EL"
-        };
+  // Funzione per avviare scanner
+  async function avviaScanner() {
+    const video = document.getElementById('video');
+    video.style.display = 'block';
+    const canvas = document.getElementById('canvas');
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    video.srcObject = stream;
 
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-
-        const PASS = "GuradaRoba@2026";
-
-        window.login = function() {
-            if (document.getElementById('pass').value === PASS) {
-                document.getElementById('login').style.display = 'none';
-                document.getElementById('contenuto').style.display = 'block';
-                caricaLista(); // carico la lista solo dopo login
-            } else {
-                alert("Password sbagliata fratello!");
-            }
+    const interval = setInterval(() => {
+      if (video.videoWidth > 0 && video.videoHeight > 0) {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext('2d').drawImage(video, 0, 0);
+        const imageData = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height);
+        const code = jsQR(imageData.data, imageData.width, imageData.height);
+        if (code) {
+          clearInterval(interval);
+          stream.getTracks().forEach(track => track.stop());
+          video.style.display = 'none';
+          // Parsa dati da QR (es. Prenotazione:123|Nome:Nome)
+          const parts = code.data.split('|');
+          const numero = parts[0].split(':')[1];
+          db.collection('prenotazioni').doc(numero).update({ status: 'ritirato' });
+          alert('QR scansionato! Capo ritirato.');
         }
+      }
+    }, 300); // Check ogni 300ms
+  }
 
-        function caricaLista() {
-            try {
-                const tabellaDiv = document.getElementById('tabella');
-                const postiDiv = document.getElementById('posti');
-
-                const q = query(collection(db, "prenotazioni"), orderBy("numero"));
-
-                onSnapshot(q, (snapshot) => {
-                    let html = '<table><tr><th>Numero</th><th>Persona</th></tr>';
-                    let count = 0;
-
-                    snapshot.forEach((doc) => {
-                        const data = doc.data();
-                        html += `<tr><td style="font-size:1.8em; color:#ff00aa;">${String(data.numero).padStart(3, '0')}</td><td style="font-size:1.5em;">${data.nome}</td></tr>`;
-                        count++;
-                    });
-
-                    html += '</table>';
-                    tabellaDiv.innerHTML = html;
-                    postiDiv.textContent = `Posti liberi: ${100 - count}`;
-                });
-            } catch (err) {
-                document.getElementById('tabella').innerHTML = '<p style="color:red;">Errore caricamento lista, ma il RESET funziona lo stesso!</p>';
-            }
-        }
-
-        window.reset = async function() {
-            alert("RESET cliccato!"); // test immediato
-            if (confirm("SEI SICURO? Cancella TUTTE le prenotazioni?")) {
-                if (confirm("ULTIMO AVVISO BRO!")) {
-                    try {
-                        const snapshot = await getDocs(collection(db, "prenotazioni"));
-                        for (const d of snapshot.docs) {
-                            await deleteDoc(doc(db, "prenotazioni", d.id));
-                        }
-                        alert("Tutto resettato! 🔥");
-                    } catch (err) {
-                        alert("Errore reset, ma ci riprovi tra 5 secondi");
-                    }
-                }
-            }
-        }
-    </script>
-</body>
-</html>
-
+  // Per il RESET TOTALE (se non c'è già)
+  document.getElementById('resetButton').addEventListener('click', async () => { // Assumi ID
+    if (confirm('Sicuro di resettare tutto?')) {
+      const batch = db.batch();
+      const prenotazioni = await db.collection('prenotazioni').get();
+      prenotazioni.forEach(doc => batch.delete(doc.ref));
+      batch.update(db.collection('contatori').doc('prenotazioni'), { count: 0 });
+      await batch.commit();
+    }
+  });
+</script>
