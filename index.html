@@ -10,13 +10,14 @@
         input, button { padding: 18px; margin: 12px; font-size: 1.4em; border: none; border-radius: 30px; }
         input { background: rgba(255,255,255,0.2); color: white; width: 85%; }
         button { background: #ff00aa; color: white; cursor: pointer; }
-        #whatsappBtn { background: #25D366; padding: 20px 50px; font-size: 1.8em; margin: 30px; border-radius: 50px; }
+        #whatsappBtn { background: #25D366 !important; padding: 20px 50px; font-size: 1.8em; margin: 30px; border-radius: 50px; cursor: pointer; }
         .numero { font-size: 8em; color: #ff00aa; margin: 20px; font-weight: bold; }
         #biglietto { background: linear-gradient(45deg, #ff00aa, #ff3399); padding: 40px; border-radius: 25px; margin: 30px auto; max-width: 420px; box-shadow: 0 0 40px #ff00aa; }
         #qrcode { margin: 30px auto; }
         .info { font-size: 2em; margin: 15px; }
     </style>
-    <script src="https://cdn.jsdelivr.net/npm/qrcode.js@1.0.0/qrcode.min.js"></script>
+    <!-- Libreria QR code stabile al 100% -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode.js/1.4.4/qrcode.min.js"></script>
 </head>
 <body>
     <h1>Guardaro<span style="color:#ff00aa;">Ba</span> Prenotato</h1>
@@ -89,23 +90,26 @@
                 timestamp: new Date() 
             });
 
+            // Mostra biglietto
             document.querySelectorAll('input, button:first-of-type, #risultato').forEach(el => el.style.display = 'none');
             document.getElementById('biglietto').style.display = 'block';
             document.getElementById('nomeBiglietto').textContent = nomeGlobale;
             document.getElementById('numeroBiglietto').textContent = numeroGlobale;
 
+            // Genera QR code (fixato con libreria stabile)
             document.getElementById("qrcode").innerHTML = "";
-            new QRCode(document.getElementById("qrcode"), {
+            new QRCode("qrcode", {
                 text: numeroGlobale,
                 width: 280,
                 height: 280,
-                colorDark : "#ff00aa",
-                colorLight : "#000000"
+                colorDark: "#ff00aa",
+                colorLight: "#000000",
+                correctLevel: QRCode.CorrectLevel.H
             });
         }
 
         window.inviaWhatsApp = function() {
-            const testo = encodeURIComponent(`*GUARDAROBA PRENOTATO*\n\nNome: ${nomeGlobale}\nNumero: ${numeroGlobale}\n\nMostra questo messaggio all'ingresso!\nBuona serata 🔥`);
+            const testo = encodeURIComponent(`*GUARDAROBA PRENOTATO*\n\nNome: ${nomeGlobale}\nNumero: ${numeroGlobale}\n\nMostra questo messaggio all'ingresso!\nBuona serata 🔥🩷`);
             window.open(`https://wa.me/?text=${testo}`, '_blank');
         }
     </script>
