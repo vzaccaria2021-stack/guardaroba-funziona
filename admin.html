@@ -1,68 +1,168 @@
-<video id="video" width="300" height="200" autoplay style="display:none;"></video>
-<canvas id="canvas" style="display:none;"></canvas>
-<button onclick="avviaScanner()">Scansiona QR per Ritirare</button>
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Area Amministrativa Guardaroba</title>
+    
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f0f0f0; margin: 0; padding: 20px; }
+        .container { max-width: 1000px; margin: auto; }
+        .dashboard { background-color: white; padding: 25px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        h1 { text-align: center; color: #333; }
+        
+        .header-stats { display: flex; justify-content: space-around; margin-bottom: 20px; padding: 15px; background-color: #e8f5e9; border-radius: 6px; border: 1px solid #c8e6c9; }
+        .stat { text-align: center; }
+        .stat span { font-size: 1.8em; font-weight: bold; color: #388e3c; display: block; }
+        
+        .booking-item { border: 1px solid #ddd; padding: 15px; margin-bottom: 10px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; background-color: #fff; }
+        
+        .booking-item.retrieved { background-color: #f1f8e9; opacity: 0.7; }
+        .booking-item.retrieved .item-details { text-decoration: line-through; color: #666; }
+        
+        .item-details strong { color: #00796b; }
+        .item-details small { display: block; color: #999; margin-top: 5px; }
 
-<script>
-  // Assumi db (Firestore) inizializzato
-
-  // Modifica il listener della lista per mostrare status e messaggio
-  db.collection('prenotazioni').orderBy('timestamp', 'desc').onSnapshot(snapshot => {
-    const lista = document.getElementById('listaPrenotazioni'); // Assumi ID esistente per la lista
-    lista.innerHTML = '';
-    let postiOccupati = 0;
-    snapshot.forEach(doc => {
-      const data = doc.data();
-      const li = document.createElement('li');
-      li.textContent = `${doc.id} - ${data.nome} - Status: ${data.status}`;
-      if (data.status === 'ritirato') {
-        li.textContent += ' - Il capo è stato ritirato!';
-        li.style.color = 'green'; // Opzionale: stile per evidenziare
-      } else {
-        postiOccupati++;
-      }
-      lista.appendChild(li);
-    });
-    // Aggiorna posti liberi (assumi max 100)
-    document.getElementById('postiLiberi').textContent = `Posti liberi: ${100 - postiOccupati}`; // Assumi ID esistente
-  });
-
-  // Funzione per avviare scanner
-  async function avviaScanner() {
-    const video = document.getElementById('video');
-    video.style.display = 'block';
-    const canvas = document.getElementById('canvas');
-    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-    video.srcObject = stream;
-
-    const interval = setInterval(() => {
-      if (video.videoWidth > 0 && video.videoHeight > 0) {
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        canvas.getContext('2d').drawImage(video, 0, 0);
-        const imageData = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height);
-        const code = jsQR(imageData.data, imageData.width, imageData.height);
-        if (code) {
-          clearInterval(interval);
-          stream.getTracks().forEach(track => track.stop());
-          video.style.display = 'none';
-          // Parsa dati da QR (es. Prenotazione:123|Nome:Nome)
-          const parts = code.data.split('|');
-          const numero = parts[0].split(':')[1];
-          db.collection('prenotazioni').doc(numero).update({ status: 'ritirato' });
-          alert('QR scansionato! Capo ritirato.');
+        .action-button { 
+            padding: 8px 15px; 
+            background-color: #ff9800; /* Arancione per l'azione */
+            color: white; 
+            border: none; 
+            border-radius: 4px; 
+            cursor: pointer; 
+            transition: background-color 0.3s;
         }
-      }
-    }, 300); // Check ogni 300ms
-  }
+        .action-button:hover:not(:disabled) { background-color: #fb8c00; }
+        .action-button:disabled { background-color: #ccc; cursor: not-allowed; }
+        .retrieved-info { font-size: 0.9em; color: #388e3c; font-weight: bold; }
 
-  // Per il RESET TOTALE (se non c'è già)
-  document.getElementById('resetButton').addEventListener('click', async () => { // Assumi ID
-    if (confirm('Sicuro di resettare tutto?')) {
-      const batch = db.batch();
-      const prenotazioni = await db.collection('prenotazioni').get();
-      prenotazioni.forEach(doc => batch.delete(doc.ref));
-      batch.update(db.collection('contatori').doc('prenotazioni'), { count: 0 });
-      await batch.commit();
-    }
-  });
-</script>
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="dashboard">
+            <h1>Dashboard Guardaroba 📊</h1>
+            <p>I dati mostrati sono salvati solo localmente su questo browser. Non sono condivisi tra dispositivi.</p>
+
+            <div class="header-stats">
+                <div class="stat">Prenotazioni Totali: <span id="totalBookings">0</span></div>
+                <div class="stat">Da Ritirare: <span id="pendingBookings">0</span></div>
+                <div class="stat">Ritirati Oggi: <span id="retrievedBookings">0</span></div>
+            </div>
+
+            <h2>Lista Prenotazioni Attive</h2>
+            <div id="activeBookingsList">
+                </div>
+            
+            <button onclick="resetDayCounter()" style="background-color: #d32f2f; margin-top: 20px;">Resetta Contatore e Lista</button>
+        </div>
+    </div>
+
+    <script>
+        const BOOKINGS_KEY = 'bookings_data'; 
+        
+        // Funzione per caricare i dati da localStorage
+        function loadBookings() {
+            try {
+                const data = localStorage.getItem(BOOKINGS_KEY);
+                return data ? JSON.parse(data) : [];
+            } catch (e) {
+                console.error("Errore nel caricamento dei dati:", e);
+                return [];
+            }
+        }
+        
+        // Funzione per salvare i dati su localStorage
+        function saveBookings(bookings) {
+            localStorage.setItem(BOOKINGS_KEY, JSON.stringify(bookings));
+        }
+
+        // Funzione per segnare un capo come ritirato (con Timestamp)
+        // Questo simula la scansione del QR e l'azione successiva
+        function markRetrieved(ticketId) {
+            let bookings = loadBookings();
+            const booking = bookings.find(b => b.id === ticketId);
+
+            if (booking && booking.status === 'pending') {
+                const now = new Date();
+                // Registra ora, minuto, secondo esatto
+                booking.timeOut = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
+                booking.status = 'retrieved';
+                
+                saveBookings(bookings); // Salva la modifica
+                renderBookingList(); // Aggiorna l'interfaccia
+            }
+        }
+
+        // Funzione per visualizzare la lista e gli stati
+        function renderBookingList() {
+            const bookings = loadBookings();
+            const listContainer = document.getElementById('activeBookingsList');
+            listContainer.innerHTML = '';
+            
+            let total = bookings.length;
+            let pending = bookings.filter(b => b.status === 'pending').length;
+            let retrieved = total - pending;
+
+            // Aggiorna gli stati in alto
+            document.getElementById('totalBookings').innerText = total;
+            document.getElementById('pendingBookings').innerText = pending;
+            document.getElementById('retrievedBookings').innerText = retrieved;
+
+            if (total === 0) {
+                listContainer.innerHTML = '<p style="text-align: center; color: #666;">Nessuna prenotazione attiva.</p>';
+                return;
+            }
+
+            // Ordina prima i capi "Da Ritirare"
+            const sortedBookings = bookings.sort((a, b) => {
+                if (a.status === 'pending' && b.status !== 'pending') return -1;
+                if (a.status !== 'pending' && b.status === 'pending') return 1;
+                return 0;
+            });
+
+            sortedBookings.forEach(booking => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = `booking-item ${booking.status}`;
+                
+                let buttonHTML;
+                let infoText = `Ingresso: ${booking.timeIn}`;
+
+                if (booking.status === 'pending') {
+                    // Tasto che simula l'azione dopo la scansione QR
+                    buttonHTML = `<button class="action-button" onclick="markRetrieved(${booking.id})">Ritirato</button>`;
+                } else {
+                    // Informazioni sul ritiro
+                    buttonHTML = `<span class="retrieved-info">Ritirato alle ${booking.timeOut}</span>`;
+                }
+
+                itemDiv.innerHTML = `
+                    <div class="item-details">
+                        <strong>Ticket #${booking.id} (${booking.items} capo/i)</strong><br>
+                        ${booking.name} - Cell: ${booking.phone}<br>
+                        <small>Ora di deposito: ${infoText}</small>
+                    </div>
+                    <div>
+                        ${buttonHTML}
+                    </div>
+                `;
+                listContainer.appendChild(itemDiv);
+            });
+        }
+        
+        // Funzione per resettare il contatore e cancellare tutti i dati
+        function resetDayCounter() {
+            if (confirm("Sei sicuro di voler resettare? Questo cancellerà TUTTE le prenotazioni attuali e il contatore.")) {
+                localStorage.removeItem(BOOKINGS_KEY);
+                localStorage.setItem('guardaroba_counter', 1);
+                renderBookingList();
+                alert("Sistema resettato per il nuovo giorno.");
+            }
+        }
+
+        // Inizializza la lista all'avvio
+        document.addEventListener('DOMContentLoaded', renderBookingList);
+    </script>
+</body>
+</html>
