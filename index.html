@@ -16,8 +16,6 @@
         #qrcode { margin: 30px auto; }
         .info { font-size: 2em; margin: 15px; }
     </style>
-    <!-- Libreria QR code stabile al 100% -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode.js/1.4.4/qrcode.min.js"></script>
 </head>
 <body>
     <h1>Guardaro<span style="color:#ff00aa;">Ba</span> Prenotato</h1>
@@ -45,6 +43,7 @@
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js';
         import { getFirestore, collection, query, orderBy, limit, getDocs, addDoc } from 'https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js';
+        import QRCode from 'https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js';
 
         const firebaseConfig = {
             apiKey: "AIzaSyCclXJ4lqgL2dZCZfzD9uVdai0RuFziERQ",
@@ -96,15 +95,16 @@
             document.getElementById('nomeBiglietto').textContent = nomeGlobale;
             document.getElementById('numeroBiglietto').textContent = numeroGlobale;
 
-            // Genera QR code (fixato con libreria stabile)
+            // Genera QR code con libreria moderna ESM
             document.getElementById("qrcode").innerHTML = "";
-            new QRCode("qrcode", {
-                text: numeroGlobale,
+            QRCode.toCanvas(document.getElementById('qrcode'), numeroGlobale, {
                 width: 280,
-                height: 280,
-                colorDark: "#ff00aa",
-                colorLight: "#000000",
-                correctLevel: QRCode.CorrectLevel.H
+                color: {
+                    dark: '#ff00aa',
+                    light: '#000000'
+                }
+            }, (error) => {
+                if (error) console.error(error);
             });
         }
 
