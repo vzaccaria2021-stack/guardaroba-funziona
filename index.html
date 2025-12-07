@@ -10,16 +10,27 @@
         input, button { padding: 18px; margin: 12px; font-size: 1.4em; border: none; border-radius: 30px; }
         input { background: rgba(255,255,255,0.2); color: white; width: 85%; }
         button { background: #ff00aa; color: white; cursor: pointer; }
-        #whatsappBtn { background: #25D366 !important; padding: 20px 50px; font-size: 1.8em; margin: 30px; border-radius: 50px; cursor: pointer; }
-        .numero { font-size: 8em; color: #ff00aa; margin: 20px; font-weight: bold; }
-        #biglietto { background: linear-gradient(45deg, #ff00aa, #ff3399); padding: 40px; border-radius: 25px; margin: 30px auto; max-width: 420px; box-shadow: 0 0 40px #ff00aa; }
-        #qrcode { margin: 30px auto; }
-        .info { font-size: 2em; margin: 15px; }
+        .numero { font-size: 9em; color: #ff00aa; margin: 10px; font-weight: bold; }
+        #biglietto { background: linear-gradient(45deg, #ff00aa, #ff3399); padding: 50px; border-radius: 30px; margin: 20px auto; max-width: 450px; box-shadow: 0 0 50px #ff00aa; }
+        #qrcode { margin: 40px auto; background: black; padding: 20px; border-radius: 20px; }
+        .nome { font-size: 2.5em; margin: 20px; color: white; font-weight: bold; }
+        #whatsappBtn { 
+            background: #25D366 !important; 
+            color: white !important; 
+            padding: 25px 60px !important; 
+            font-size: 2em !important; 
+            margin: 50px auto !important; 
+            border-radius: 50px !important; 
+            cursor: pointer; 
+            display: block !important;
+            box-shadow: 0 0 30px #25D366;
+        }
     </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
 <body>
     <h1>Guardaro<span style="color:#ff00aa;">Ba</span> Prenotato</h1>
-    <p style="font-size:1.5em;">Prenota il tuo numero!</p>
+    <p style="font-size:1.6em;">Prenota il tuo numero!</p>
 
     <input type="text" id="nome" placeholder="Il tuo nome o nickname">
     <br>
@@ -28,12 +39,12 @@
     <div id="risultato"></div>
     
     <div id="biglietto" style="display:none;">
-        <h2 style="font-size:2.2em;">Biglietto VIP</h2>
-        <div class="info" id="nomeBiglietto"></div>
+        <h2 style="font-size:2.8em; margin-bottom:0;">Biglietto VIP</h2>
+        <div class="nome" id="nomeBiglietto"></div>
         <div class="numero" id="numeroBiglietto"></div>
         <div id="qrcode"></div>
         
-        <p style="font-size:1.6em; margin:30px;">Fai screenshot o invia su WhatsApp</p>
+        <p style="font-size:1.8em; margin:40px 20px;">Fai screenshot del QR code<br>o invialo su WhatsApp</p>
         
         <button id="whatsappBtn" onclick="inviaWhatsApp()">
             INVIA SU WHATSAPP
@@ -43,7 +54,6 @@
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js';
         import { getFirestore, collection, query, orderBy, limit, getDocs, addDoc } from 'https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js';
-        import QRCode from 'https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js';
 
         const firebaseConfig = {
             apiKey: "AIzaSyCclXJ4lqgL2dZCZfzD9uVdai0RuFziERQ",
@@ -63,21 +73,14 @@
 
         window.prenota = async function() {
             let nome = document.getElementById('nome').value.trim();
-            let res = document.getElementById('risultato');
-            if (!nome) { 
-                res.innerHTML = '<p style="color:red; font-size:1.8em;">Scrivi un nome!</p>'; 
-                return; 
-            }
+            if (!nome) return alert("Scrivi un nome fratello!");
 
             const q = query(collection(db, "prenotazioni"), orderBy("numero", "desc"), limit(1));
             const snapshot = await getDocs(q);
             let ultimo = 0;
             if (!snapshot.empty) ultimo = snapshot.docs[0].data().numero;
             const nuovoNumero = ultimo + 1;
-            if (nuovoNumero > 100) { 
-                res.innerHTML = '<p style="color:red; font-size:2.5em;">SOLD OUT!</p>'; 
-                return; 
-            }
+            if (nuovoNumero > 100) return alert("SOLD OUT!");
 
             const num = String(nuovoNumero).padStart(3, '0');
             nomeGlobale = nome.toUpperCase();
@@ -89,27 +92,23 @@
                 timestamp: new Date() 
             });
 
-            // Mostra biglietto
             document.querySelectorAll('input, button:first-of-type, #risultato').forEach(el => el.style.display = 'none');
             document.getElementById('biglietto').style.display = 'block';
             document.getElementById('nomeBiglietto').textContent = nomeGlobale;
             document.getElementById('numeroBiglietto').textContent = numeroGlobale;
 
-            // Genera QR code con libreria moderna ESM
             document.getElementById("qrcode").innerHTML = "";
-            QRCode.toCanvas(document.getElementById('qrcode'), numeroGlobale, {
-                width: 280,
-                color: {
-                    dark: '#ff00aa',
-                    light: '#000000'
-                }
-            }, (error) => {
-                if (error) console.error(error);
+            new QRCode(document.getElementById("qrcode"), {
+                text: numeroGlobale,
+                width: 320,
+                height: 320,
+                colorDark: "#ff00aa",
+                colorLight: "#000000"
             });
         }
 
         window.inviaWhatsApp = function() {
-            const testo = encodeURIComponent(`*GUARDAROBA PRENOTATO*\n\nNome: ${nomeGlobale}\nNumero: ${numeroGlobale}\n\nMostra questo messaggio all'ingresso!\nBuona serata 🔥🩷`);
+            const testo = encodeURIComponent(`*GUARDAROBA PRENOTATO* 🔥\n\nNome: ${nomeGlobale}\nNumero: ${numeroGlobale}\n\nMostra questo all'ingresso!\nBuona serata legend 🩷`);
             window.open(`https://wa.me/?text=${testo}`, '_blank');
         }
     </script>
