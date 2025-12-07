@@ -1,116 +1,58 @@
-<!DOCTYPE html>
-<html lang="it">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GuardaroBa Prenotato</title>
-    <style>
-        body { background: linear-gradient(135deg, #1a0033, #000); color: #fff; font-family: Arial; text-align: center; padding: 50px; margin:0; }
-        h1 { color: #ff00aa; font-size: 3em; margin:20px; }
-        input, button { padding: 18px; margin: 12px; font-size: 1.4em; border: none; border-radius: 30px; }
-        input { background: rgba(255,255,255,0.2); color: white; width: 85%; }
-        button { background: #ff00aa; color: white; cursor: pointer; }
-        .numero { font-size: 9em; color: #ff00aa; margin: 10px; font-weight: bold; }
-        #biglietto { background: linear-gradient(45deg, #ff00aa, #ff3399); padding: 50px; border-radius: 30px; margin: 20px auto; max-width: 450px; box-shadow: 0 0 50px #ff00aa; }
-        #qrcode { margin: 40px auto; background: black; padding: 20px; border-radius: 20px; }
-        .nome { font-size: 2.5em; margin: 20px; color: white; font-weight: bold; }
-        #whatsappBtn { 
-            background: #25D366 !important; 
-            color: white !important; 
-            padding: 25px 60px !important; 
-            font-size: 2em !important; 
-            margin: 50px auto !important; 
-            border-radius: 50px !important; 
-            cursor: pointer; 
-            display: block !important;
-            box-shadow: 0 0 30px #25D366;
-        }
-    </style>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-</head>
-<body>
-    <h1>Guardaro<span style="color:#ff00aa;">Ba</span> Prenotato</h1>
-    <p style="font-size:1.6em;">Prenota il tuo numero!</p>
+<h1>GuardaroBa Prenotato</h1>
+<p>Prenota il tuo numero per depositare il capo. Inserisci nome e telefono per ricevere il biglietto via messaggio.</p>
 
-    <input type="text" id="nome" placeholder="Il tuo nome o nickname">
-    <br>
-    <button onclick="prenota()">PRENOTA</button>
-    
-    <div id="risultato"></div>
-    
-    <div id="biglietto" style="display:none;">
-        <h2 style="font-size:2.8em; margin-bottom:0;">Biglietto VIP</h2>
-        <div class="nome" id="nomeBiglietto"></div>
-        <div class="numero" id="numeroBiglietto"></div>
-        <div id="qrcode"></div>
-        
-        <p style="font-size:1.8em; margin:40px 20px;">Fai screenshot del QR code<br>o invialo su WhatsApp</p>
-        
-        <button id="whatsappBtn" onclick="inviaWhatsApp()">
-            INVIA SU WHATSAPP
-        </button>
-    </div>
+<form id="prenotazioneForm">
+  <label for="nome">Nome:</label>
+  <input type="text" id="nome" required>
+  <label for="telefono">Numero di Telefono (es. +393xxxxxxxxx):</label>
+  <input type="tel" id="telefono" required>
+  <button type="submit">PRENOTA</button>
+</form>
 
-    <script type="module">
-        import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js';
-        import { getFirestore, collection, query, orderBy, limit, getDocs, addDoc } from 'https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js';
+<div id="qrcode" style="display:none;"></div> <!-- QR temporaneo per generazione -->
+<p id="messaggio"></p>
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyCclXJ4lqgL2dZCZfzD9uVdai0RuFziERQ",
-            authDomain: "guardaroba-prenotato.firebaseapp.com",
-            projectId: "guardaroba-prenotato",
-            storageBucket: "guardaroba-prenotato.firebasestorage.app",
-            messagingSenderId: "994569794036",
-            appId: "1:994569794036:web:445da2dd598745585a49a1",
-            measurementId: "G-P3XK7XW7EL"
-        };
+<script>
+  // Assumi Firebase inizializzato come prima
+  const form = document.getElementById('prenotazioneForm');
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const nome = document.getElementById('nome').value;
+    const telefono = document.getElementById('telefono').value;
 
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
+    // Genera numero unico incrementale
+    const counterRef = db.collection('contatori').doc('prenotazioni');
+    let numero = 1;
+    await db.runTransaction(async (transaction) => {
+      const counter = await transaction.get(counterRef);
+      numero = (counter.exists ? counter.data().count + 1 : 1);
+      transaction.set(counterRef, { count: numero });
+    });
 
-        let nomeGlobale = "";
-        let numeroGlobale = "";
+    // Salva prenotazione
+    const prenotazioneId = numero.toString();
+    await db.collection('prenotazioni').doc(prenotazioneId).set({
+      nome: nome,
+      telefono: telefono,
+      status: 'depositato',
+      timestamp: firebase.firestore.FieldValue.serverTimestamp()
+    });
 
-        window.prenota = async function() {
-            let nome = document.getElementById('nome').value.trim();
-            if (!nome) return alert("Scrivi un nome fratello!");
+    // Genera QR con dati (numero e nome)
+    const qrData = `Prenotazione:${numero}|Nome:${nome}`; // Formato semplice per parsing
+    const qrElement = document.getElementById('qrcode');
+    new QRCode(qrElement, qrData);
 
-            const q = query(collection(db, "prenotazioni"), orderBy("numero", "desc"), limit(1));
-            const snapshot = await getDocs(q);
-            let ultimo = 0;
-            if (!snapshot.empty) ultimo = snapshot.docs[0].data().numero;
-            const nuovoNumero = ultimo + 1;
-            if (nuovoNumero > 100) return alert("SOLD OUT!");
+    // Converti QR in immagine base64 per invio (o carica su Storage)
+    const qrCanvas = qrElement.querySelector('canvas');
+    const qrImageBase64 = qrCanvas.toDataURL('image/png');
 
-            const num = String(nuovoNumero).padStart(3, '0');
-            nomeGlobale = nome.toUpperCase();
-            numeroGlobale = num;
+    // Invia SMS con numero e QR (o link a QR)
+    const sendSMS = firebase.functions().httpsCallable('inviaSMS');
+    const messaggio = `La tua prenotazione n. ${numero}. Mostra questo QR per ritirare: [QR allegato o link]`;
+    await sendSMS({ telefono: telefono, messaggio: messaggio, qrBase64: qrImageBase64 }); // Modifica la function per gestire base64 se necessario
 
-            await addDoc(collection(db, "prenotazioni"), { 
-                numero: nuovoNumero, 
-                nome: nome, 
-                timestamp: new Date() 
-            });
-
-            document.querySelectorAll('input, button:first-of-type, #risultato').forEach(el => el.style.display = 'none');
-            document.getElementById('biglietto').style.display = 'block';
-            document.getElementById('nomeBiglietto').textContent = nomeGlobale;
-            document.getElementById('numeroBiglietto').textContent = numeroGlobale;
-
-            document.getElementById("qrcode").innerHTML = "";
-            new QRCode(document.getElementById("qrcode"), {
-                text: numeroGlobale,
-                width: 320,
-                height: 320,
-                colorDark: "#ff00aa",
-                colorLight: "#000000"
-            });
-        }
-
-        window.inviaWhatsApp = function() {
-            const testo = encodeURIComponent(`*GUARDAROBA PRENOTATO* 🔥\n\nNome: ${nomeGlobale}\nNumero: ${numeroGlobale}\n\nMostra questo all'ingresso!\nBuona serata legend 🩷`);
-            window.open(`https://wa.me/?text=${testo}`, '_blank');
-        }
-    </script>
-</body>
-</html>
+    document.getElementById('messaggio').textContent = 'Prenotazione effettuata! Riceverai un messaggio con il biglietto.';
+    qrElement.style.display = 'none'; // Nascondi QR dopo
+  });
+</script>
