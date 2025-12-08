@@ -14,6 +14,8 @@
         button { padding: 12px 25px; background-color: #25D366; color: white; border: none; font-size: 16px; cursor: pointer; border-radius: 6px; width: 100%; margin-bottom: 15px;}
         .qr-section { margin-top: 20px; padding-top: 15px; border-top: 1px dashed #ccc; }
         #currentTicketNum { color: #D32525; font-size: 2.5em; font-weight: bold; display: block; margin: 10px 0; }
+        /* Aggiunto minimale: Stile per bottone download, matcha esistente */
+        #downloadBtn { background-color: #ff9800; margin-top: 10px; width: auto; }
     </style>
 </head>
 <body>
@@ -40,9 +42,11 @@
 
         <div id="result-display" style="display:none;" class="qr-section">
             <h3>Ticket N°: <span id="currentTicketNum"></span></h3>
-            <p>⚠️ **AZIONE:** Scansiona il codice qui sotto per inviare il memo al cliente.</p>
+            <p>Warning: **AZIONE:** Scansiona il codice qui sotto per inviare il memo al cliente.</p>
             <div id="qrcode" style="display: flex; justify-content: center; margin: 15px 0;"></div>
             <a id="waLink" href="#" target="_blank" style="color: #25D366; text-decoration: none;">Apri WhatsApp in una nuova scheda</a>
+            <!-- Aggiunto: Bottone per download QR -->
+            <button id="downloadBtn" onclick="downloadQR()" style="display:none;">Scarica QR (per allegare)</button>
         </div>
     </div>
 
@@ -102,18 +106,32 @@
             document.getElementById('waLink').href = waUrl;
 
             document.getElementById('qrcode').innerHTML = ""; 
+            // Modificato: QR con JSON completo
+            const qrData = JSON.stringify(newBooking);
             new QRCode(document.getElementById('qrcode'), {
-                text: waUrl,
+                text: qrData,
                 width: 150,
                 height: 150,
                 colorDark : "#000000",
                 colorLight : "#ffffff",
                 correctLevel : QRCode.CorrectLevel.H
             });
+
+            // Aggiunto: Mostra bottone download
+            document.getElementById('downloadBtn').style.display = 'block';
             
             document.getElementById('clientName').value = "";
             document.getElementById('customerPhone').value = "";
             document.getElementById('itemCount').value = "1";
+        }
+
+        // Aggiunto: Funzione per download QR
+        function downloadQR() {
+            const qrCanvas = document.getElementById('qrcode').querySelector('canvas');
+            const link = document.createElement('a');
+            link.download = 'prenotazione_qr.png';
+            link.href = qrCanvas.toDataURL('image/png');
+            link.click();
         }
     </script>
 </body>
