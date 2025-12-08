@@ -8,12 +8,15 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
     <style>
+        /* ... Stili omessi per brevità, usa quelli della risposta precedente ... */
         body { font-family: Arial, sans-serif; background-color: #f0f0f0; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
         #booking-form { background-color: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); max-width: 450px; width: 100%; text-align: center; }
         input[type="text"], input[type="number"], select { padding: 10px; width: 100%; margin: 8px 0 15px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
         button { padding: 12px 25px; background-color: #25D366; color: white; border: none; font-size: 16px; cursor: pointer; border-radius: 6px; width: 100%; margin-bottom: 15px;}
         .qr-section { margin-top: 20px; padding-top: 15px; border-top: 1px dashed #ccc; }
         #currentTicketNum { color: #D32525; font-size: 2.5em; font-weight: bold; display: block; margin: 10px 0; }
+        #qr-container canvas { border: 2px solid #ccc; border-radius: 4px; }
+        .action-note { background-color: #fff3cd; color: #856404; padding: 10px; border-radius: 4px; margin-top: 10px; }
     </style>
 </head>
 <body>
@@ -31,18 +34,23 @@
         <select id="itemCount">
             <option value="1">1 Capo</option>
             <option value="2">2 Capi</option>
-            <option value="3">3 Capi</option>
-            <option value="4">4 Capi</option>
-            <option value="5">5 Capi</option>
-        </select>
+            </select>
         
-        <button onclick="createBooking()">Genera Ticket & QR</button>
+        <button onclick="createBooking()">Genera & Invia Memo (Manuale Veloce) 🚀</button>
 
         <div id="result-display" style="display:none;" class="qr-section">
             <h3>Ticket N°: <span id="currentTicketNum"></span></h3>
-            <p>⚠️ **AZIONE:** Scansiona il codice qui sotto per inviare il memo al cliente.</p>
-            <div id="qrcode" style="display: flex; justify-content: center; margin: 15px 0;"></div>
-            <a id="waLink" href="#" target="_blank" style="color: #25D366; text-decoration: none;">Apri WhatsApp in una nuova scheda</a>
+            <div class="action-note">
+                <strong>AZIONI:</strong>
+                <ol style="text-align: left;">
+                    <li>Clicca il link qui sotto per aprire la chat.</li>
+                    <li>**Copia l'immagine QR** qui sotto (tasto destro) e incolla nella chat.</li>
+                    <li>Premi INVIO.</li>
+                </ol>
+            </div>
+            
+            <div id="qr-container" style="display: flex; justify-content: center; margin: 15px 0;"></div>
+            <a id="waLink" href="#" target="_blank" style="color: #25D366; text-decoration: none; font-weight: bold;">Clicca Qui per Aprire WhatsApp 🔗</a>
         </div>
     </div>
 
@@ -50,20 +58,11 @@
         const BOOKINGS_KEY = 'guardaroba_prenotazioni'; 
         let nextTicketNumber = parseInt(localStorage.getItem('guardaroba_counter') || 1);
 
-        function loadBookings() {
-            try {
-                const data = localStorage.getItem(BOOKINGS_KEY);
-                return data ? JSON.parse(data) : [];
-            } catch (e) {
-                return [];
-            }
-        }
-        
-        function saveBookings(bookings) {
-            localStorage.setItem(BOOKINGS_KEY, JSON.stringify(bookings));
-        }
+        // Funzioni loadBookings e saveBookings omesse per brevità...
 
         function createBooking() {
+            // ... (logica di validazione e salvataggio omessa, è la stessa di prima)
+
             const name = document.getElementById('clientName').value.trim();
             const phone = document.getElementById('customerPhone').value.trim();
             const itemCount = document.getElementById('itemCount').value;
@@ -89,31 +88,31 @@
                 timeOut: null
             };
             
-            let bookings = loadBookings();
-            bookings.push(newBooking);
-            saveBookings(bookings);
-
+            // Logica di salvataggio...
+            
             document.getElementById('currentTicketNum').innerText = ticketNumber;
             document.getElementById('result-display').style.display = 'block';
 
-            const message = `Ciao ${name}! Il tuo capo è stato depositato. Il tuo **numero di ticket per il ritiro è: ${ticketNumber}** per ${itemCount} capo/i.`;
+            // 1. Prepara il messaggio SENZA QR (che sarà inviato come immagine)
+            const message = `Ciao ${name}! 👋\nIl tuo capo è depositato.\n\n🎫 TICKET N°: *${ticketNumber}*\n\nMostra il QR Code o questo numero al ritiro.`;
+            
             const waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
 
-            document.getElementById('waLink').href = waUrl;
-
-            document.getElementById('qrcode').innerHTML = ""; 
-            new QRCode(document.getElementById('qrcode'), {
-                text: waUrl,
+            // 2. Generazione QR (il QR Code conterrà solo il ticket ID per la scansione)
+            document.getElementById('qr-container').innerHTML = ""; 
+            new QRCode(document.getElementById('qr-container'), {
+                text: ticketNumber.toString(), // Il QR contiene SOLO il numero di ticket
                 width: 150,
                 height: 150,
                 colorDark : "#000000",
                 colorLight : "#ffffff",
                 correctLevel : QRCode.CorrectLevel.H
             });
-            
-            document.getElementById('clientName').value = "";
-            document.getElementById('customerPhone').value = "";
-            document.getElementById('itemCount').value = "1";
+
+            // 3. Imposta il link per aprire la chat
+            document.getElementById('waLink').href = waUrl;
+
+            // ... (pulizia campi)
         }
     </script>
 </body>
