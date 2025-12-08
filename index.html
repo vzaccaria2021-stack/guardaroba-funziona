@@ -4,17 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Guardaroba - Nuova Prenotazione</title>
-    
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
     <style>
         body { font-family: Arial, sans-serif; background-color: #f0f0f0; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
         #booking-form { background-color: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); max-width: 450px; width: 100%; text-align: center; }
         input[type="text"], input[type="number"], select { padding: 10px; width: 100%; margin: 8px 0 15px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
-        button { padding: 12px 25px; background-color: #25D366; color: white; border: none; font-size: 16px; cursor: pointer; border-radius: 6px; width: 100%; margin-bottom: 15px;}
-        .qr-section { margin-top: 20px; padding-top: 15px; border-top: 1px dashed #ccc; }
+        button { padding: 12px 25px; background-color: #25D366; color: white; border: none; font-size: 16px; cursor: pointer; border-radius: 6px; width: 100%; margin-bottom: 15px; }
+        .info-section { margin-top: 20px; padding-top: 15px; border-top: 1px dashed #ccc; }
         #currentTicketNum { color: #D32525; font-size: 2.5em; font-weight: bold; display: block; margin: 10px 0; }
-        #downloadBtn { background-color: #ff9800; margin-top: 10px; width: auto; }
     </style>
 </head>
 <body>
@@ -37,31 +34,22 @@
             <option value="5">5 Capi</option>
         </select>
         
-        <button onclick="createBooking()">Genera Ticket & QR</button>
+        <button onclick="createBooking()">Genera Ticket</button>
 
-        <div id="result-display" style="display:none;" class="qr-section">
+        <div id="result-display" style="display:none;" class="info-section">
             <h3>Ticket N°: <span id="currentTicketNum"></span></h3>
-            <p>Scansiona il codice qui sotto per inviare il memo al cliente.</p>
-            <div id="qrcode" style="display: flex; justify-content: center; margin: 15px 0;"></div>
-            <a id="waLink" href="#" target="_blank" style="color: #25D366; text-decoration: none;">Apri WhatsApp in una nuova scheda</a>
-
-            <button id="downloadBtn" onclick="downloadQR()" style="display:none;">Scarica QR (per allegare)</button>
+            <a id="waLink" href="#" target="_blank" style="color: #25D366; text-decoration: none;">Invia Ticket via WhatsApp</a>
         </div>
     </div>
 
     <script>
-        const BOOKINGS_KEY = 'guardaroba_prenotazioni'; 
+        const BOOKINGS_KEY = "guardaroba_prenotazioni";
         let nextTicketNumber = parseInt(localStorage.getItem('guardaroba_counter') || 1);
 
         function loadBookings() {
-            try {
-                const data = localStorage.getItem(BOOKINGS_KEY);
-                return data ? JSON.parse(data) : [];
-            } catch (e) {
-                return [];
-            }
+            return JSON.parse(localStorage.getItem(BOOKINGS_KEY) || "[]");
         }
-        
+
         function saveBookings(bookings) {
             localStorage.setItem(BOOKINGS_KEY, JSON.stringify(bookings));
         }
@@ -71,76 +59,7 @@
             const phone = document.getElementById('customerPhone').value.trim();
             const itemCount = document.getElementById('itemCount').value;
 
-            if (name === "" || phone.length < 10) {
-                alert("Per favore, inserisci nome e numero di cellulare validi.");
+            if (!name || phone.length < 10) {
+                alert("Inserisci nome e numero validi.");
                 return;
             }
-
-            const ticketNumber = nextTicketNumber++;
-            localStorage.setItem('guardaroba_counter', nextTicketNumber);
-            
-            const now = new Date();
-            const timeIn = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-
-            const newBooking = {
-                id: ticketNumber,
-                name: name,
-                phone: phone,
-                items: itemCount,
-                timeIn: timeIn,
-                status: 'pending',
-                timeOut: null
-            };
-            
-            let bookings = loadBookings();
-            bookings.push(newBooking);
-            saveBookings(bookings);
-
-            document.getElementById('currentTicketNum').innerText = ticketNumber;
-            document.getElementById('result-display').style.display = 'block';
-
-            // 🔥 GENERA QR
-            document.getElementById('qrcode').innerHTML = "";
-            const qrData = JSON.stringify(newBooking);
-            const qrContainer = document.getElementById('qrcode');
-            const qr = new QRCode(qrContainer, {
-                text: qrData,
-                width: 150,
-                height: 150,
-                correctLevel: QRCode.CorrectLevel.H
-            });
-
-            // 🔥 BASE64 per WhatsApp
-            setTimeout(() => {
-                const qrCanvas = qrContainer.querySelector("canvas");
-                const qrBase64 = qrCanvas.toDataURL("image/png");
-
-                const message =
-                    `Ciao ${name}!\n` +
-                    `Il tuo capo è stato depositato.\n` +
-                    `Ticket: *${ticketNumber}*\n` +
-                    `Numero capi: ${itemCount}\n\n` +
-                    `QR per il ritiro:\n${qrBase64}`;
-
-                const waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
-                document.getElementById('waLink').href = waUrl;
-
-            }, 300);
-
-            document.getElementById('downloadBtn').style.display = 'block';
-            
-            document.getElementById('clientName').value = "";
-            document.getElementById('customerPhone').value = "";
-            document.getElementById('itemCount').value = "1";
-        }
-
-        function downloadQR() {
-            const qrCanvas = document.getElementById('qrcode').querySelector('canvas');
-            const link = document.createElement('a');
-            link.download = 'prenotazione_qr.png';
-            link.href = qrCanvas.toDataURL('image/png');
-            link.click();
-        }
-    </script>
-</body>
-</html>
