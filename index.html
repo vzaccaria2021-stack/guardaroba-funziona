@@ -14,7 +14,6 @@
         button { padding: 12px 25px; background-color: #25D366; color: white; border: none; font-size: 16px; cursor: pointer; border-radius: 6px; width: 100%; margin-bottom: 15px;}
         .qr-section { margin-top: 20px; padding-top: 15px; border-top: 1px dashed #ccc; }
         #currentTicketNum { color: #D32525; font-size: 2.5em; font-weight: bold; display: block; margin: 10px 0; }
-        /* Aggiunto minimale: Stile per bottone download, matcha esistente */
         #downloadBtn { background-color: #ff9800; margin-top: 10px; width: auto; }
     </style>
 </head>
@@ -42,10 +41,10 @@
 
         <div id="result-display" style="display:none;" class="qr-section">
             <h3>Ticket N°: <span id="currentTicketNum"></span></h3>
-            <p>Warning: **AZIONE:** Scansiona il codice qui sotto per inviare il memo al cliente.</p>
+            <p>Scansiona il codice qui sotto per inviare il memo al cliente.</p>
             <div id="qrcode" style="display: flex; justify-content: center; margin: 15px 0;"></div>
             <a id="waLink" href="#" target="_blank" style="color: #25D366; text-decoration: none;">Apri WhatsApp in una nuova scheda</a>
-            <!-- Aggiunto: Bottone per download QR -->
+
             <button id="downloadBtn" onclick="downloadQR()" style="display:none;">Scarica QR (per allegare)</button>
         </div>
     </div>
@@ -100,24 +99,34 @@
             document.getElementById('currentTicketNum').innerText = ticketNumber;
             document.getElementById('result-display').style.display = 'block';
 
-            const message = `Ciao ${name}! Il tuo capo è stato depositato. Il tuo **numero di ticket per il ritiro è: ${ticketNumber}** per ${itemCount} capo/i.`;
-            const waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
-
-            document.getElementById('waLink').href = waUrl;
-
-            document.getElementById('qrcode').innerHTML = ""; 
-            // Modificato: QR con JSON completo
+            // 🔥 GENERA QR
+            document.getElementById('qrcode').innerHTML = "";
             const qrData = JSON.stringify(newBooking);
-            new QRCode(document.getElementById('qrcode'), {
+            const qrContainer = document.getElementById('qrcode');
+            const qr = new QRCode(qrContainer, {
                 text: qrData,
                 width: 150,
                 height: 150,
-                colorDark : "#000000",
-                colorLight : "#ffffff",
-                correctLevel : QRCode.CorrectLevel.H
+                correctLevel: QRCode.CorrectLevel.H
             });
 
-            // Aggiunto: Mostra bottone download
+            // 🔥 BASE64 per WhatsApp
+            setTimeout(() => {
+                const qrCanvas = qrContainer.querySelector("canvas");
+                const qrBase64 = qrCanvas.toDataURL("image/png");
+
+                const message =
+                    `Ciao ${name}!\n` +
+                    `Il tuo capo è stato depositato.\n` +
+                    `Ticket: *${ticketNumber}*\n` +
+                    `Numero capi: ${itemCount}\n\n` +
+                    `QR per il ritiro:\n${qrBase64}`;
+
+                const waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+                document.getElementById('waLink').href = waUrl;
+
+            }, 300);
+
             document.getElementById('downloadBtn').style.display = 'block';
             
             document.getElementById('clientName').value = "";
@@ -125,7 +134,6 @@
             document.getElementById('itemCount').value = "1";
         }
 
-        // Aggiunto: Funzione per download QR
         function downloadQR() {
             const qrCanvas = document.getElementById('qrcode').querySelector('canvas');
             const link = document.createElement('a');
