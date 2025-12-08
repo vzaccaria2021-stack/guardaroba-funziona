@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Area Amministrativa Guardaroba</title>
     
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script> <!-- Minimale: Per scanning QR -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
 
     <style>
         body { font-family: Arial, sans-serif; background-color: #f0f0f0; margin: 0; padding: 20px; }
@@ -20,25 +20,14 @@
         .booking-item { border: 1px solid #ddd; padding: 15px; margin-bottom: 10px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; background-color: #fff; }
         .booking-item.retrieved { background-color: #f1f8e9; opacity: 0.7; }
         .booking-item.retrieved .item-details { text-decoration: line-through; color: #666; }
-        .item-details strong { color: #00796b; }
-        .item-details small { display: block; color: #999; margin-top: 5px; }
 
-        .action-button { 
-            padding: 8px 15px; 
-            background-color: #ff9800; 
-            color: white; 
-            border: none; 
-            border-radius: 4px; 
-            cursor: pointer; 
-            transition: background-color 0.3s;
-        }
+        .action-button { padding: 8px 15px; background-color: #ff9800; color: white; border: none; border-radius: 4px; cursor: pointer; }
         .action-button:hover:not(:disabled) { background-color: #fb8c00; }
-        .retrieved-info { font-size: 0.9em; color: #388e3c; font-weight: bold; }
-        /* Aggiunto minimale: Stili per scanner, integrati con esistenti */
+
         #scanBtn { background-color: #25D366; margin-top: 10px; }
         #videoContainer { display: none; margin: 20px 0; text-align: center; }
         #video { width: 100%; max-width: 300px; border: 1px solid #ddd; border-radius: 4px; }
-        #closeScanBtn { background-color: #d32f2f; margin-top: 10px; }
+        #closeScanBtn { background-color: #d32f2f; margin-top: 10px; color: white; }
     </style>
 </head>
 <body>
@@ -57,8 +46,8 @@
             <h2>Lista Prenotazioni</h2>
             <div id="activeBookingsList"></div>
             
-            <!-- Aggiunto: Bottone per scanner -->
             <button id="scanBtn" onclick="startScanner()">Scansiona QR dal Cliente</button>
+
             <div id="videoContainer">
                 <video id="video" autoplay></video>
                 <canvas id="canvas" style="display:none;"></canvas>
@@ -76,9 +65,7 @@
             try {
                 const data = localStorage.getItem(BOOKINGS_KEY);
                 return data ? JSON.parse(data) : [];
-            } catch (e) {
-                return [];
-            }
+            } catch (e) { return []; }
         }
         
         function saveBookings(bookings) {
@@ -142,9 +129,7 @@
                         ${booking.name} - Cell: ${booking.phone}<br>
                         <small>Ora di deposito: ${infoText}</small>
                     </div>
-                    <div>
-                        ${buttonHTML}
-                    </div>
+                    <div>${buttonHTML}</div>
                 `;
                 listContainer.appendChild(itemDiv);
             });
@@ -158,11 +143,12 @@
             }
         }
 
-        // Aggiunto: Funzioni per scanning QR (minimale, senza alterare layout)
+        // ✔ SCANNER MIGLIORATO
         let videoStream;
-        
+
         function startScanner() {
             document.getElementById('videoContainer').style.display = 'block';
+
             navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
                 .then(stream => {
                     videoStream = stream;
@@ -171,41 +157,64 @@
                     video.play();
                     requestAnimationFrame(scanQR);
                 })
-                .catch(err => alert('Errore accesso camera: ' + err));
+                .catch(err => alert("Errore accesso camera: " + err));
         }
-        
+
         function stopScanner() {
-            if (videoStream) videoStream.getTracks().forEach(track => track.stop());
+            if (videoStream) videoStream.getTracks().forEach(t => t.stop());
             document.getElementById('videoContainer').style.display = 'none';
         }
-        
+
         function scanQR() {
             const video = document.getElementById('video');
             const canvas = document.getElementById('canvas');
+
             if (video.videoWidth > 0 && video.videoHeight > 0) {
                 canvas.width = video.videoWidth;
                 canvas.height = video.videoHeight;
+
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                const code = jsQR(imageData.data, imageData.width, imageData.height);
-                
+
+                const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const code = jsQR(img.data, img.width, img.height);
+
                 if (code) {
                     try {
                         const bookingData = JSON.parse(code.data);
-                        if (bookingData.id && bookingData.status === 'pending') {
-                            markRetrieved(bookingData.id);
-                            alert(`QR scansionato! Ticket #${bookingData.id} ritirato.`);
+
+                        if (!bookingData.id) {
+                            alert("QR non valido.");
+                            return requestAnimationFrame(scanQR);
+                        }
+
+                        const bookings = loadBookings();
+                        const booking = bookings.find(b => b.id === bookingData.id);
+
+                        if (!booking) {
+                            alert("❌ Prenotazione non trovata.");
                             stopScanner();
                             return;
-                        } else {
-                            alert('QR non valido o già ritirato.');
                         }
-                    } catch {
-                        alert('Dati QR non validi.');
+
+                        if (booking.status === "retrieved") {
+                            alert(`⚠️ Ticket #${booking.id} già ritirato.`);
+                            stopScanner();
+                            return;
+                        }
+
+                        // 🔥 Ritiro OK
+                        markRetrieved(booking.id);
+                        alert(`✅ Ticket #${booking.id} ritirato.`);
+                        stopScanner();
+                        return;
+
+                    } catch (e) {
+                        alert("QR non valido.");
                     }
                 }
             }
+
             requestAnimationFrame(scanQR);
         }
 
