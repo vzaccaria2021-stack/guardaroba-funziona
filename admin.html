@@ -41,7 +41,7 @@
         </div>
 
         <div class="search-box">
-            <input type="text" id="searchInput" placeholder="Cerca per numero ticket, nome o telefono..." oninput="renderBookingList()">
+            <input type="text" id="searchInput" placeholder="Cerca per numero ticket o nome..." oninput="renderBookingList()">
         </div>
 
         <h2>Lista Prenotazioni</h2>
@@ -81,10 +81,9 @@
 
         let bookings = loadBookings();
 
-        // Filtri ricerca
+        // 🔍 Ricerca SENZA cellulare
         bookings = bookings.filter(b =>
             b.name.toLowerCase().includes(search) ||
-            b.phone.includes(search) ||
             b.id.toString().includes(search)
         );
 
