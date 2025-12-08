@@ -14,13 +14,12 @@
         button { padding: 12px 25px; background-color: #25D366; color: white; border: none; font-size: 16px; cursor: pointer; border-radius: 6px; width: 100%; margin-bottom: 15px;}
         .qr-section { margin-top: 20px; padding-top: 15px; border-top: 1px dashed #ccc; }
         #currentTicketNum { color: #D32525; font-size: 2.5em; font-weight: bold; display: block; margin: 10px 0; }
-        #waLink { display: inline-block; margin-top: 10px; color: #25D366; text-decoration: none; font-weight: bold; }
     </style>
 </head>
 <body>
 
     <div id="booking-form">
-        <h2>Nuova Prenotazione</h2>
+        <h2>Nuova Prenotazione Guardaroba</h2>
         
         <label for="clientName">Nome Cliente:</label>
         <input type="text" id="clientName" placeholder="Mario Rossi" required>
@@ -43,14 +42,15 @@
             <h3>Ticket N°: <span id="currentTicketNum"></span></h3>
             <p>⚠️ **AZIONE:** Scansiona il codice qui sotto per inviare il memo al cliente.</p>
             <div id="qrcode" style="display: flex; justify-content: center; margin: 15px 0;"></div>
-            <a id="waLink" href="#" target="_blank">Apri WhatsApp in una nuova scheda</a>
+            <a id="waLink" href="#" target="_blank" style="color: #25D366; text-decoration: none;">Apri WhatsApp in una nuova scheda</a>
         </div>
         
-        <a href="admin.html" style="margin-top: 20px; display: block;">Vai alla Gestione (Admin)</a>
+        <p style="margin-top: 20px;"><a href="admin.html">Vai alla Gestione Prenotazioni (Admin)</a></p>
     </div>
 
     <script>
-        const BOOKINGS_KEY = 'bookings_data'; 
+        // CHIAVI CONDIVISE: Entrambe le pagine DEVONO usare le stesse chiavi.
+        const BOOKINGS_KEY = 'guardaroba_prenotazioni'; 
         let nextTicketNumber = parseInt(localStorage.getItem('guardaroba_counter') || 1);
 
         function loadBookings() {
@@ -58,7 +58,6 @@
                 const data = localStorage.getItem(BOOKINGS_KEY);
                 return data ? JSON.parse(data) : [];
             } catch (e) {
-                console.error("Errore nel caricamento dei dati:", e);
                 return [];
             }
         }
@@ -84,7 +83,7 @@
             const now = new Date();
             const timeIn = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
 
-            // 2. Aggiungi alla memoria locale (simulazione DB)
+            // 2. Costruisci il nuovo oggetto prenotazione
             const newBooking = {
                 id: ticketNumber,
                 name: name,
@@ -92,14 +91,15 @@
                 items: itemCount,
                 timeIn: timeIn,
                 status: 'pending',
-                timeOut: null
+                timeOut: null // Verrà compilato in admin.html
             };
             
+            // 3. Salva nella memoria locale per admin.html
             let bookings = loadBookings();
             bookings.push(newBooking);
-            saveBookings(bookings); // Salva il nuovo array
+            saveBookings(bookings);
 
-            // 3. Genera l'output e il QR Code (come nella versione precedente)
+            // 4. Genera l'output e il QR Code
             document.getElementById('currentTicketNum').innerText = ticketNumber;
             document.getElementById('result-display').style.display = 'block';
 
@@ -118,7 +118,7 @@
                 correctLevel : QRCode.CorrectLevel.H
             });
             
-            // 4. Resetta il modulo per il prossimo cliente
+            // 5. Resetta il modulo
             document.getElementById('clientName').value = "";
             document.getElementById('customerPhone').value = "";
             document.getElementById('itemCount').value = "1";
