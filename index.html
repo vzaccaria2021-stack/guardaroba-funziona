@@ -3,86 +3,70 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestione Guardaroba Digitale (Avanzato)</title>
+    <title>Guardaroba - Nuova Prenotazione</title>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
     <style>
-        body { font-family: Arial, sans-serif; background-color: #f0f0f0; margin: 0; padding: 20px; }
-        .container { display: flex; max-width: 1200px; margin: auto; gap: 20px; }
-        #booking-form, #booking-list-view { background-color: white; padding: 25px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        #booking-form { flex: 1; min-width: 300px; }
-        #booking-list-view { flex: 2; }
-        input[type="text"], input[type="number"], select { padding: 10px; width: 100%; margin: 8px 0 15px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
-        button { padding: 10px 15px; background-color: #25D366; color: white; border: none; border-radius: 4px; cursor: pointer; transition: background-color 0.3s; width: 100%; }
-        button:hover { background-color: #128C7E; }
-        .booking-item { border: 1px solid #eee; padding: 10px; margin-bottom: 10px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; }
-        .booking-item.retrieved { background-color: #e6ffe6; opacity: 0.7; }
-        .retrieved button { background-color: #ccc !important; cursor: not-allowed; }
-        .retrieved-info { font-size: 0.8em; color: green; font-weight: bold; }
-        .header-stats { display: flex; justify-content: space-around; margin-bottom: 20px; padding: 10px; background-color: #f9f9f9; border-radius: 4px; }
-        .stat { text-align: center; }
-        .stat span { font-size: 1.5em; font-weight: bold; color: #333; }
-        .qr-section { text-align: center; margin-top: 20px; padding-top: 15px; border-top: 1px dashed #ccc; }
+        body { font-family: Arial, sans-serif; background-color: #f0f0f0; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+        #booking-form { background-color: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); max-width: 450px; width: 100%; text-align: center; }
+        input[type="text"], input[type="number"], select { padding: 10px; width: 100%; margin: 8px 0 15px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
+        button { padding: 12px 25px; background-color: #25D366; color: white; border: none; font-size: 16px; cursor: pointer; border-radius: 6px; width: 100%; margin-bottom: 15px;}
+        .qr-section { margin-top: 20px; padding-top: 15px; border-top: 1px dashed #ccc; }
+        #currentTicketNum { color: #D32525; font-size: 2.5em; font-weight: bold; display: block; margin: 10px 0; }
+        #waLink { display: inline-block; margin-top: 10px; color: #25D366; text-decoration: none; font-weight: bold; }
     </style>
 </head>
 <body>
 
-    <div class="container">
-        <div id="booking-form">
-            <h2>Nuova Prenotazione</h2>
-            
-            <label for="clientName">Nome Cliente:</label>
-            <input type="text" id="clientName" placeholder="Mario Rossi" required>
+    <div id="booking-form">
+        <h2>Nuova Prenotazione</h2>
+        
+        <label for="clientName">Nome Cliente:</label>
+        <input type="text" id="clientName" placeholder="Mario Rossi" required>
 
-            <label for="customerPhone">Cellulare Cliente (es. 39333...):</label>
-            <input type="number" id="customerPhone" placeholder="39xxxxxxxxxx" required>
-            
-            <label for="itemCount">Numero Capi:</label>
-            <select id="itemCount">
-                <option value="1">1 Capo</option>
-                <option value="2">2 Capi</option>
-                <option value="3">3 Capi</option>
-                <option value="4">4 Capi</option>
-                <option value="5">5 Capi</option>
-            </select>
-            
-            <button onclick="createBooking()">Genera Ticket & QR</button>
+        <label for="customerPhone">Cellulare Cliente (es. 39333...):</label>
+        <input type="number" id="customerPhone" placeholder="39xxxxxxxxxx" required>
+        
+        <label for="itemCount">Numero Capi:</label>
+        <select id="itemCount">
+            <option value="1">1 Capo</option>
+            <option value="2">2 Capi</option>
+            <option value="3">3 Capi</option>
+            <option value="4">4 Capi</option>
+            <option value="5">5 Capi</option>
+        </select>
+        
+        <button onclick="createBooking()">Genera Ticket & QR</button>
 
-            <div id="result-display" style="display:none;" class="qr-section">
-                <h3>Ticket N°: <span id="currentTicketNum" style="color: #D32525;"></span></h3>
-                <p>⚠️ **AZIONE OPERATORE:** Scansiona il codice qui sotto per inviare il memo al cliente.</p>
-                <div id="qrcode" style="display: flex; justify-content: center; margin: 15px 0;"></div>
-                <a id="waLink" href="#" target="_blank" style="display: block; margin-top: 10px;">Apri WhatsApp in una nuova scheda</a>
-            </div>
-
+        <div id="result-display" style="display:none;" class="qr-section">
+            <h3>Ticket N°: <span id="currentTicketNum"></span></h3>
+            <p>⚠️ **AZIONE:** Scansiona il codice qui sotto per inviare il memo al cliente.</p>
+            <div id="qrcode" style="display: flex; justify-content: center; margin: 15px 0;"></div>
+            <a id="waLink" href="#" target="_blank">Apri WhatsApp in una nuova scheda</a>
         </div>
-
-        <div id="booking-list-view">
-            <h2>Gestione Guardaroba</h2>
-            
-            <div class="header-stats">
-                <div class="stat">Totali: <span id="totalBookings">0</span></div>
-                <div class="stat">Da Ritirare: <span id="pendingBookings">0</span></div>
-                <div class="stat">Ritirati Oggi: <span id="retrievedBookings">0</span></div>
-            </div>
-
-            <hr>
-            
-            <h4>Lista Prenotazioni Attive (Simulazione)</h4>
-            <div id="activeBookingsList">
-                <p style="text-align: center; color: #666;">Nessuna prenotazione attiva.</p>
-            </div>
-            
-        </div>
+        
+        <a href="admin.html" style="margin-top: 20px; display: block;">Vai alla Gestione (Admin)</a>
     </div>
 
     <script>
-        // Array per SIMULARE il database (Non condiviso né persistente)
-        let bookings = [];
+        const BOOKINGS_KEY = 'bookings_data'; 
         let nextTicketNumber = parseInt(localStorage.getItem('guardaroba_counter') || 1);
 
-        // Funzione per creare una nuova prenotazione
+        function loadBookings() {
+            try {
+                const data = localStorage.getItem(BOOKINGS_KEY);
+                return data ? JSON.parse(data) : [];
+            } catch (e) {
+                console.error("Errore nel caricamento dei dati:", e);
+                return [];
+            }
+        }
+        
+        function saveBookings(bookings) {
+            localStorage.setItem(BOOKINGS_KEY, JSON.stringify(bookings));
+        }
+
         function createBooking() {
             const name = document.getElementById('clientName').value.trim();
             const phone = document.getElementById('customerPhone').value.trim();
@@ -100,7 +84,7 @@
             const now = new Date();
             const timeIn = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
 
-            // 2. Aggiungi alla SIMULAZIONE del database
+            // 2. Aggiungi alla memoria locale (simulazione DB)
             const newBooking = {
                 id: ticketNumber,
                 name: name,
@@ -110,20 +94,21 @@
                 status: 'pending',
                 timeOut: null
             };
+            
+            let bookings = loadBookings();
             bookings.push(newBooking);
+            saveBookings(bookings); // Salva il nuovo array
 
-            // 3. Genera l'output per l'operatore
+            // 3. Genera l'output e il QR Code (come nella versione precedente)
             document.getElementById('currentTicketNum').innerText = ticketNumber;
             document.getElementById('result-display').style.display = 'block';
 
-            // 4. Prepara il link WhatsApp (Memo per il cliente)
-            const message = `Ciao ${name}! Il tuo capo è stato depositato. Il tuo **numero di ticket per il ritiro è: ${ticketNumber}** per ${itemCount} capo/i. Mostra questo numero al ritiro. Grazie!`;
+            const message = `Ciao ${name}! Il tuo capo è stato depositato. Il tuo **numero di ticket per il ritiro è: ${ticketNumber}** per ${itemCount} capo/i.`;
             const waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
 
             document.getElementById('waLink').href = waUrl;
 
-            // 5. Genera il QR Code
-            document.getElementById('qrcode').innerHTML = ""; // Pulisce precedenti QR
+            document.getElementById('qrcode').innerHTML = ""; 
             new QRCode(document.getElementById('qrcode'), {
                 text: waUrl,
                 width: 150,
@@ -133,78 +118,11 @@
                 correctLevel : QRCode.CorrectLevel.H
             });
             
-            // 6. Resetta il modulo per il prossimo cliente e aggiorna la lista
+            // 4. Resetta il modulo per il prossimo cliente
             document.getElementById('clientName').value = "";
             document.getElementById('customerPhone').value = "";
             document.getElementById('itemCount').value = "1";
-            renderBookingList();
         }
-
-        // Funzione per segnare un capo come ritirato (Simulazione)
-        function markRetrieved(ticketId) {
-            const booking = bookings.find(b => b.id === ticketId);
-            if (booking && booking.status === 'pending') {
-                const now = new Date();
-                // Registra ora, minuto, secondo esatto
-                booking.timeOut = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
-                booking.status = 'retrieved';
-                renderBookingList(); // Aggiorna l'interfaccia
-                
-                // Nascondi la sezione QR Code dopo il ritiro (per preparare il prossimo inserimento)
-                document.getElementById('result-display').style.display = 'none';
-            }
-        }
-
-        // Funzione per visualizzare la lista e gli stati (Simulazione)
-        function renderBookingList() {
-            const listContainer = document.getElementById('activeBookingsList');
-            listContainer.innerHTML = '';
-            
-            let total = bookings.length;
-            let pending = bookings.filter(b => b.status === 'pending').length;
-            let retrieved = total - pending;
-
-            // Aggiorna gli stati in alto
-            document.getElementById('totalBookings').innerText = total;
-            document.getElementById('pendingBookings').innerText = pending;
-            document.getElementById('retrievedBookings').innerText = retrieved;
-
-            if (total === 0) {
-                listContainer.innerHTML = '<p style="text-align: center; color: #666;">Nessuna prenotazione attiva.</p>';
-                return;
-            }
-
-            bookings.forEach(booking => {
-                const itemDiv = document.createElement('div');
-                itemDiv.className = `booking-item ${booking.status}`;
-                
-                let buttonHTML;
-                let infoText = `Ingresso: ${booking.timeIn}`;
-
-                if (booking.status === 'pending') {
-                    // Tasto per segnare come ritirato
-                    buttonHTML = `<button onclick="markRetrieved(${booking.id})">Ritirato</button>`;
-                } else {
-                    // Informazioni sul ritiro
-                    buttonHTML = `<span class="retrieved-info">Ritirato alle ${booking.timeOut}</span>`;
-                }
-
-                itemDiv.innerHTML = `
-                    <div>
-                        <strong>#${booking.id} (${booking.items} capo/i)</strong><br>
-                        ${booking.name} (${booking.phone})<br>
-                        <small>${infoText}</small>
-                    </div>
-                    <div>
-                        ${buttonHTML}
-                    </div>
-                `;
-                listContainer.appendChild(itemDiv);
-            });
-        }
-        
-        // Inizializza la lista all'avvio
-        renderBookingList();
     </script>
 </body>
 </html>
