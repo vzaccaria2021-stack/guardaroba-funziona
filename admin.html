@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Area Amministrativa Guardaroba</title>
     
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script> <!-- Minimale: Per scanning QR -->
+
     <style>
         body { font-family: Arial, sans-serif; background-color: #f0f0f0; margin: 0; padding: 20px; }
         .container { max-width: 1000px; margin: auto; }
@@ -32,6 +34,11 @@
         }
         .action-button:hover:not(:disabled) { background-color: #fb8c00; }
         .retrieved-info { font-size: 0.9em; color: #388e3c; font-weight: bold; }
+        /* Aggiunto minimale: Stili per scanner, integrati con esistenti */
+        #scanBtn { background-color: #25D366; margin-top: 10px; }
+        #videoContainer { display: none; margin: 20px 0; text-align: center; }
+        #video { width: 100%; max-width: 300px; border: 1px solid #ddd; border-radius: 4px; }
+        #closeScanBtn { background-color: #d32f2f; margin-top: 10px; }
     </style>
 </head>
 <body>
@@ -49,6 +56,14 @@
 
             <h2>Lista Prenotazioni</h2>
             <div id="activeBookingsList"></div>
+            
+            <!-- Aggiunto: Bottone per scanner -->
+            <button id="scanBtn" onclick="startScanner()">Scansiona QR dal Cliente</button>
+            <div id="videoContainer">
+                <video id="video" autoplay></video>
+                <canvas id="canvas" style="display:none;"></canvas>
+                <button id="closeScanBtn" onclick="stopScanner()">Chiudi Scanner</button>
+            </div>
             
             <button onclick="resetDayCounter()" style="background-color: #d32f2f; margin-top: 20px; color: white; border: none; padding: 10px; border-radius: 4px; cursor: pointer;">Resetta Tutto</button>
         </div>
@@ -141,6 +156,57 @@
                 localStorage.setItem('guardaroba_counter', 1);
                 renderBookingList();
             }
+        }
+
+        // Aggiunto: Funzioni per scanning QR (minimale, senza alterare layout)
+        let videoStream;
+        
+        function startScanner() {
+            document.getElementById('videoContainer').style.display = 'block';
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+                .then(stream => {
+                    videoStream = stream;
+                    const video = document.getElementById('video');
+                    video.srcObject = stream;
+                    video.play();
+                    requestAnimationFrame(scanQR);
+                })
+                .catch(err => alert('Errore accesso camera: ' + err));
+        }
+        
+        function stopScanner() {
+            if (videoStream) videoStream.getTracks().forEach(track => track.stop());
+            document.getElementById('videoContainer').style.display = 'none';
+        }
+        
+        function scanQR() {
+            const video = document.getElementById('video');
+            const canvas = document.getElementById('canvas');
+            if (video.videoWidth > 0 && video.videoHeight > 0) {
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const code = jsQR(imageData.data, imageData.width, imageData.height);
+                
+                if (code) {
+                    try {
+                        const bookingData = JSON.parse(code.data);
+                        if (bookingData.id && bookingData.status === 'pending') {
+                            markRetrieved(bookingData.id);
+                            alert(`QR scansionato! Ticket #${bookingData.id} ritirato.`);
+                            stopScanner();
+                            return;
+                        } else {
+                            alert('QR non valido o già ritirato.');
+                        }
+                    } catch {
+                        alert('Dati QR non validi.');
+                    }
+                }
+            }
+            requestAnimationFrame(scanQR);
         }
 
         document.addEventListener('DOMContentLoaded', renderBookingList);
