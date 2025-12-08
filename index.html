@@ -19,7 +19,7 @@
 <body>
 
     <div id="booking-form">
-        <h2>Nuova Prenotazione Guardaroba</h2>
+        <h2>Nuova Prenotazione</h2>
         
         <label for="clientName">Nome Cliente:</label>
         <input type="text" id="clientName" placeholder="Mario Rossi" required>
@@ -44,12 +44,9 @@
             <div id="qrcode" style="display: flex; justify-content: center; margin: 15px 0;"></div>
             <a id="waLink" href="#" target="_blank" style="color: #25D366; text-decoration: none;">Apri WhatsApp in una nuova scheda</a>
         </div>
-        
-        <p style="margin-top: 20px;"><a href="admin.html">Vai alla Gestione Prenotazioni (Admin)</a></p>
     </div>
 
     <script>
-        // CHIAVI CONDIVISE: Entrambe le pagine DEVONO usare le stesse chiavi.
         const BOOKINGS_KEY = 'guardaroba_prenotazioni'; 
         let nextTicketNumber = parseInt(localStorage.getItem('guardaroba_counter') || 1);
 
@@ -76,14 +73,12 @@
                 return;
             }
 
-            // 1. Assegna il numero e aggiorna il contatore
             const ticketNumber = nextTicketNumber++;
             localStorage.setItem('guardaroba_counter', nextTicketNumber);
             
             const now = new Date();
             const timeIn = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
 
-            // 2. Costruisci il nuovo oggetto prenotazione
             const newBooking = {
                 id: ticketNumber,
                 name: name,
@@ -91,15 +86,13 @@
                 items: itemCount,
                 timeIn: timeIn,
                 status: 'pending',
-                timeOut: null // Verrà compilato in admin.html
+                timeOut: null
             };
             
-            // 3. Salva nella memoria locale per admin.html
             let bookings = loadBookings();
             bookings.push(newBooking);
             saveBookings(bookings);
 
-            // 4. Genera l'output e il QR Code
             document.getElementById('currentTicketNum').innerText = ticketNumber;
             document.getElementById('result-display').style.display = 'block';
 
@@ -118,7 +111,6 @@
                 correctLevel : QRCode.CorrectLevel.H
             });
             
-            // 5. Resetta il modulo
             document.getElementById('clientName').value = "";
             document.getElementById('customerPhone').value = "";
             document.getElementById('itemCount').value = "1";
