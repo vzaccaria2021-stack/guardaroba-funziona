@@ -3,222 +3,105 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Area Amministrativa Guardaroba</title>
-    
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
+    <title>Guardaroba - Nuova Prenotazione</title>
 
     <style>
-        body { font-family: Arial, sans-serif; background-color: #f0f0f0; margin: 0; padding: 20px; }
-        .container { max-width: 1000px; margin: auto; }
-        .dashboard { background-color: white; padding: 25px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); }
-        h1 { text-align: center; color: #333; }
-        
-        .header-stats { display: flex; justify-content: space-around; margin-bottom: 20px; padding: 15px; background-color: #e8f5e9; border-radius: 6px; border: 1px solid #c8e6c9; }
-        .stat { text-align: center; }
-        .stat span { font-size: 1.8em; font-weight: bold; color: #388e3c; display: block; }
-        
-        .booking-item { border: 1px solid #ddd; padding: 15px; margin-bottom: 10px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; background-color: #fff; }
-        .booking-item.retrieved { background-color: #f1f8e9; opacity: 0.7; }
-        .booking-item.retrieved .item-details { text-decoration: line-through; color: #666; }
-
-        .action-button { padding: 8px 15px; background-color: #ff9800; color: white; border: none; border-radius: 4px; cursor: pointer; }
-        .action-button:hover:not(:disabled) { background-color: #fb8c00; }
-
-        #scanBtn { background-color: #25D366; margin-top: 10px; }
-        #videoContainer { display: none; margin: 20px 0; text-align: center; }
-        #video { width: 100%; max-width: 300px; border: 1px solid #ddd; border-radius: 4px; }
-        #closeScanBtn { background-color: #d32f2f; margin-top: 10px; color: white; }
+        body { font-family: Arial, sans-serif; background-color: #f0f0f0; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+        #booking-form { background-color: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); max-width: 450px; width: 100%; text-align: center; }
+        input[type="text"], input[type="number"], select { padding: 10px; width: 100%; margin: 8px 0 15px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
+        button { padding: 12px 25px; background-color: #25D366; color: white; border: none; font-size: 16px; cursor: pointer; border-radius: 6px; width: 100%; margin-bottom: 15px;}
+        .info-section { margin-top: 20px; padding-top: 15px; border-top: 1px dashed #ccc; }
+        #currentTicketNum { color: #D32525; font-size: 2.5em; font-weight: bold; display: block; margin: 10px 0; }
     </style>
 </head>
 <body>
 
-    <div class="container">
-        <div class="dashboard">
-            <h1>Dashboard Guardaroba 📊</h1>
-            <p>Dati visibili solo su questo browser.</p>
+    <div id="booking-form">
+        <h2>Nuova Prenotazione</h2>
+        
+        <label for="clientName">Nome Cliente:</label>
+        <input type="text" id="clientName" placeholder="Mario Rossi" required>
 
-            <div class="header-stats">
-                <div class="stat">Totali: <span id="totalBookings">0</span></div>
-                <div class="stat">Da Ritirare: <span id="pendingBookings">0</span></div>
-                <div class="stat">Ritirati: <span id="retrievedBookings">0</span></div>
-            </div>
+        <label for="customerPhone">Cellulare Cliente (es. 39333...):</label>
+        <input type="number" id="customerPhone" placeholder="39xxxxxxxxxx" required>
 
-            <h2>Lista Prenotazioni</h2>
-            <div id="activeBookingsList"></div>
-            
-            <button id="scanBtn" onclick="startScanner()">Scansiona QR dal Cliente</button>
+        <label for="itemCount">Numero Capi:</label>
+        <select id="itemCount">
+            <option value="1">1 Capo</option>
+            <option value="2">2 Capi</option>
+            <option value="3">3 Capi</option>
+            <option value="4">4 Capi</option>
+            <option value="5">5 Capi</option>
+        </select>
 
-            <div id="videoContainer">
-                <video id="video" autoplay></video>
-                <canvas id="canvas" style="display:none;"></canvas>
-                <button id="closeScanBtn" onclick="stopScanner()">Chiudi Scanner</button>
-            </div>
-            
-            <button onclick="resetDayCounter()" style="background-color: #d32f2f; margin-top: 20px; color: white; border: none; padding: 10px; border-radius: 4px; cursor: pointer;">Resetta Tutto</button>
+        <button onclick="createBooking()">Genera Ticket</button>
+
+        <div id="result-display" style="display:none;" class="info-section">
+            <h3>Ticket N°: <span id="currentTicketNum"></span></h3>
+            <a id="waLink" href="#" target="_blank" style="color: #25D366; text-decoration: none;">Invia Ticket via WhatsApp</a>
         </div>
     </div>
 
     <script>
-        const BOOKINGS_KEY = 'guardaroba_prenotazioni'; 
-        
+        const BOOKINGS_KEY = "guardaroba_prenotazioni";
+        let nextTicketNumber = parseInt(localStorage.getItem('guardaroba_counter') || 1);
+
         function loadBookings() {
-            try {
-                const data = localStorage.getItem(BOOKINGS_KEY);
-                return data ? JSON.parse(data) : [];
-            } catch (e) { return []; }
+            return JSON.parse(localStorage.getItem(BOOKINGS_KEY) || "[]");
         }
-        
+
         function saveBookings(bookings) {
             localStorage.setItem(BOOKINGS_KEY, JSON.stringify(bookings));
         }
 
-        function markRetrieved(ticketId) {
-            let bookings = loadBookings();
-            const booking = bookings.find(b => b.id === ticketId);
+        function createBooking() {
+            const name = document.getElementById('clientName').value.trim();
+            const phone = document.getElementById('customerPhone').value.trim();
+            const itemCount = document.getElementById('itemCount').value;
 
-            if (booking && booking.status === 'pending') {
-                const now = new Date();
-                booking.timeOut = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
-                booking.status = 'retrieved';
-                
-                saveBookings(bookings);
-                renderBookingList();
-            }
-        }
-
-        function renderBookingList() {
-            const bookings = loadBookings();
-            const listContainer = document.getElementById('activeBookingsList');
-            listContainer.innerHTML = '';
-            
-            let total = bookings.length;
-            let pending = bookings.filter(b => b.status === 'pending').length;
-            let retrieved = total - pending;
-
-            document.getElementById('totalBookings').innerText = total;
-            document.getElementById('pendingBookings').innerText = pending;
-            document.getElementById('retrievedBookings').innerText = retrieved;
-
-            if (total === 0) {
-                listContainer.innerHTML = '<p style="text-align: center; color: #666;">Nessuna prenotazione attiva.</p>';
+            if (!name || phone.length < 10) {
+                alert("Inserisci nome e numero validi.");
                 return;
             }
 
-            const sortedBookings = bookings.sort((a, b) => {
-                if (a.status === 'pending' && b.status !== 'pending') return -1;
-                if (a.status !== 'pending' && b.status === 'pending') return 1;
-                return 0;
-            });
+            const ticketNumber = nextTicketNumber++;
+            localStorage.setItem("guardaroba_counter", nextTicketNumber);
 
-            sortedBookings.forEach(booking => {
-                const itemDiv = document.createElement('div');
-                itemDiv.className = `booking-item ${booking.status}`;
-                
-                let buttonHTML;
-                let infoText = `Ingresso: ${booking.timeIn}`;
+            const now = new Date();
+            const timeIn = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes()
+                .toString().padStart(2, '0')}`;
 
-                if (booking.status === 'pending') {
-                    buttonHTML = `<button class="action-button" onclick="markRetrieved(${booking.id})">Ritirato</button>`;
-                } else {
-                    buttonHTML = `<span class="retrieved-info">Ritirato alle ${booking.timeOut}</span>`;
-                }
+            const newBooking = {
+                id: ticketNumber,
+                name,
+                phone,
+                items: itemCount,
+                timeIn,
+                status: "pending",
+                timeOut: null
+            };
 
-                itemDiv.innerHTML = `
-                    <div class="item-details">
-                        <strong>Ticket #${booking.id} (${booking.items} capo/i)</strong><br>
-                        ${booking.name} - Cell: ${booking.phone}<br>
-                        <small>Ora di deposito: ${infoText}</small>
-                    </div>
-                    <div>${buttonHTML}</div>
-                `;
-                listContainer.appendChild(itemDiv);
-            });
+            const bookings = loadBookings();
+            bookings.push(newBooking);
+            saveBookings(bookings);
+
+            document.getElementById("currentTicketNum").innerText = ticketNumber;
+            document.getElementById("result-display").style.display = "block";
+
+            const message =
+                `Ciao ${name}!\n` +
+                `Il tuo capo è stato depositato.\n` +
+                `Ticket: *${ticketNumber}*\n` +
+                `Capi: ${itemCount}\n` +
+                `Orario: ${timeIn}`;
+
+            document.getElementById("waLink").href =
+                `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+
+            document.getElementById("clientName").value = "";
+            document.getElementById("customerPhone").value = "";
+            document.getElementById("itemCount").value = "1";
         }
-        
-        function resetDayCounter() {
-            if (confirm("Sei sicuro di voler resettare? Questo cancellerà TUTTE le prenotazioni.")) {
-                localStorage.removeItem(BOOKINGS_KEY);
-                localStorage.setItem('guardaroba_counter', 1);
-                renderBookingList();
-            }
-        }
-
-        // ✔ SCANNER MIGLIORATO
-        let videoStream;
-
-        function startScanner() {
-            document.getElementById('videoContainer').style.display = 'block';
-
-            navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
-                .then(stream => {
-                    videoStream = stream;
-                    const video = document.getElementById('video');
-                    video.srcObject = stream;
-                    video.play();
-                    requestAnimationFrame(scanQR);
-                })
-                .catch(err => alert("Errore accesso camera: " + err));
-        }
-
-        function stopScanner() {
-            if (videoStream) videoStream.getTracks().forEach(t => t.stop());
-            document.getElementById('videoContainer').style.display = 'none';
-        }
-
-        function scanQR() {
-            const video = document.getElementById('video');
-            const canvas = document.getElementById('canvas');
-
-            if (video.videoWidth > 0 && video.videoHeight > 0) {
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
-
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-                const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                const code = jsQR(img.data, img.width, img.height);
-
-                if (code) {
-                    try {
-                        const bookingData = JSON.parse(code.data);
-
-                        if (!bookingData.id) {
-                            alert("QR non valido.");
-                            return requestAnimationFrame(scanQR);
-                        }
-
-                        const bookings = loadBookings();
-                        const booking = bookings.find(b => b.id === bookingData.id);
-
-                        if (!booking) {
-                            alert("❌ Prenotazione non trovata.");
-                            stopScanner();
-                            return;
-                        }
-
-                        if (booking.status === "retrieved") {
-                            alert(`⚠️ Ticket #${booking.id} già ritirato.`);
-                            stopScanner();
-                            return;
-                        }
-
-                        // 🔥 Ritiro OK
-                        markRetrieved(booking.id);
-                        alert(`✅ Ticket #${booking.id} ritirato.`);
-                        stopScanner();
-                        return;
-
-                    } catch (e) {
-                        alert("QR non valido.");
-                    }
-                }
-            }
-
-            requestAnimationFrame(scanQR);
-        }
-
-        document.addEventListener('DOMContentLoaded', renderBookingList);
     </script>
 </body>
 </html>
