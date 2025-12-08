@@ -8,24 +8,19 @@
     <style>
         body { font-family: Arial, sans-serif; background-color: #f0f0f0; margin: 0; padding: 20px; }
         .container { max-width: 1000px; margin: auto; }
-        .dashboard { background-color: white; padding: 25px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .dashboard { background-color: white; padding: 25px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); }
         h1 { text-align: center; color: #333; }
-        
         .header-stats { display: flex; justify-content: space-around; margin-bottom: 20px; padding: 15px; background-color: #e8f5e9; border-radius: 6px; border: 1px solid #c8e6c9; }
         .stat { text-align: center; }
         .stat span { font-size: 1.8em; font-weight: bold; color: #388e3c; display: block; }
-        
         .booking-item { border: 1px solid #ddd; padding: 15px; margin-bottom: 10px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; background-color: #fff; }
-        
         .booking-item.retrieved { background-color: #f1f8e9; opacity: 0.7; }
         .booking-item.retrieved .item-details { text-decoration: line-through; color: #666; }
-        
         .item-details strong { color: #00796b; }
         .item-details small { display: block; color: #999; margin-top: 5px; }
-
         .action-button { 
             padding: 8px 15px; 
-            background-color: #ff9800; /* Arancione per l'azione */
+            background-color: #ff9800; 
             color: white; 
             border: none; 
             border-radius: 4px; 
@@ -35,7 +30,6 @@
         .action-button:hover:not(:disabled) { background-color: #fb8c00; }
         .action-button:disabled { background-color: #ccc; cursor: not-allowed; }
         .retrieved-info { font-size: 0.9em; color: #388e3c; font-weight: bold; }
-
     </style>
 </head>
 <body>
@@ -44,6 +38,8 @@
         <div class="dashboard">
             <h1>Dashboard Guardaroba 📊</h1>
             <p>I dati mostrati sono salvati solo localmente su questo browser. Non sono condivisi tra dispositivi.</p>
+            
+            <a href="index.html" style="display: block; margin-bottom: 20px;">Torna alla Creazione Prenotazione</a>
 
             <div class="header-stats">
                 <div class="stat">Prenotazioni Totali: <span id="totalBookings">0</span></div>
@@ -62,26 +58,25 @@
     <script>
         const BOOKINGS_KEY = 'bookings_data'; 
         
-        // Funzione per caricare i dati da localStorage
+        // Funzione per caricare i dati
         function loadBookings() {
             try {
                 const data = localStorage.getItem(BOOKINGS_KEY);
                 return data ? JSON.parse(data) : [];
             } catch (e) {
-                console.error("Errore nel caricamento dei dati:", e);
                 return [];
             }
         }
         
-        // Funzione per salvare i dati su localStorage
+        // Funzione per salvare i dati
         function saveBookings(bookings) {
             localStorage.setItem(BOOKINGS_KEY, JSON.stringify(bookings));
         }
 
         // Funzione per segnare un capo come ritirato (con Timestamp)
-        // Questo simula la scansione del QR e l'azione successiva
         function markRetrieved(ticketId) {
             let bookings = loadBookings();
+            // Cerca il ticket per ID (numero)
             const booking = bookings.find(b => b.id === ticketId);
 
             if (booking && booking.status === 'pending') {
@@ -130,10 +125,8 @@
                 let infoText = `Ingresso: ${booking.timeIn}`;
 
                 if (booking.status === 'pending') {
-                    // Tasto che simula l'azione dopo la scansione QR
                     buttonHTML = `<button class="action-button" onclick="markRetrieved(${booking.id})">Ritirato</button>`;
                 } else {
-                    // Informazioni sul ritiro
                     buttonHTML = `<span class="retrieved-info">Ritirato alle ${booking.timeOut}</span>`;
                 }
 
@@ -157,7 +150,6 @@
                 localStorage.removeItem(BOOKINGS_KEY);
                 localStorage.setItem('guardaroba_counter', 1);
                 renderBookingList();
-                alert("Sistema resettato per il nuovo giorno.");
             }
         }
 
