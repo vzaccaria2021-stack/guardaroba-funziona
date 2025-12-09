@@ -4,103 +4,91 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Area Amministrativa Guardaroba</title>
-
     <style>
         body { font-family: Arial, sans-serif; background-color: #f0f0f0; margin: 0; padding: 20px; }
         .container { max-width: 1000px; margin: auto; }
         .dashboard { background-color: white; padding: 25px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
         h1 { text-align: center; color: #333; }
-
         .header-stats { display: flex; justify-content: space-around; margin-bottom: 20px; padding: 15px; background-color: #e8f5e9; border-radius: 6px; border: 1px solid #c8e6c9; }
         .stat span { font-size: 2em; font-weight: bold; color: #388e3c; }
-
         .search-box { margin: 20px 0; text-align: center; }
         .search-box input { width: 90%; padding: 12px; font-size: 16px; border-radius: 6px; border: 1px solid #bbb; }
-
         .booking-item { border: 1px solid #ddd; padding: 15px; margin-bottom: 10px; border-radius: 6px; background: #fff; display: flex; justify-content: space-between; align-items: center; }
         .booking-item.retrieved { background-color: #f1f8e9; opacity: 0.7; }
-
         .action-button { padding: 8px 15px; background-color: #ff9800; color: #fff; border: none; border-radius: 6px; cursor: pointer; }
         .action-button:hover { background-color: #fb8c00; }
-
         .retrieved-info { font-size: 0.9em; color: #2e7d32; font-weight: bold; }
-
         #resetBtn { background-color: #d32f2f; color: #fff; padding: 10px; margin-top:20px; border: none; border-radius: 6px; cursor: pointer; width: 100%; }
     </style>
+
+    <!-- FIREBASE -->
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js"></script>
 </head>
 <body>
-
 <div class="container">
     <div class="dashboard">
         <h1>Dashboard Guardaroba</h1>
-
         <div class="header-stats">
             <div class="stat">Totali: <span id="totalBookings">0</span></div>
             <div class="stat">Da ritirare: <span id="pendingBookings">0</span></div>
             <div class="stat">Ritirati: <span id="retrievedBookings">0</span></div>
         </div>
-
         <div class="search-box">
             <input type="text" id="searchInput" placeholder="Cerca per numero ticket o nome..." oninput="renderBookingList()">
         </div>
-
         <h2>Lista Prenotazioni</h2>
         <div id="activeBookingsList"></div>
-
-        <button id="resetBtn" onclick="resetDayCounter()">Resetta Tutto</button>
+        <button id="resetBtn" onclick="resetDayCounter()">Resetta Tutto (cancella prenotazioni)</button>
     </div>
 </div>
 
 <script>
-    const BOOKINGS_KEY = "guardaroba_prenotazioni";
+    // STESSA CONFIGURAZIONE DI INDEX.HTML (copia-incolla uguale)
+    const firebaseConfig = {
+        apiKey: "inserisci-tua-api-key",
+        authDomain: "tuo-progetto.firebaseapp.com",
+        databaseURL: "https://tuo-progetto-default-rtdb.europe-west1.firebasedatabase.app",
+        projectId: "tuo-progetto",
+        storageBucket: "tuo-progetto.appspot.com",
+        messagingSenderId: "123456789",
+        appId: "1:123456789:web:abcdef123456"
+    };
 
-    function loadBookings() {
-        return JSON.parse(localStorage.getItem(BOOKINGS_KEY) || "[]");
-    }
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    const bookingsRef = db.ref("prenotazioni");
 
-    function saveBookings(bookings) {
-        localStorage.setItem(BOOKINGS_KEY, JSON.stringify(bookings));
-    }
+    let allBookings = [];
 
-    function markRetrieved(ticketId) {
-        const bookings = loadBookings();
-        const b = bookings.find(x => x.id === ticketId);
-
-        if (b && b.status === "pending") {
-            const now = new Date();
-            b.status = "retrieved";
-            b.timeOut = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}:${now.getSeconds().toString().padStart(2,'0')}`;
-            saveBookings(bookings);
-        }
-
+    // Ascolta in tempo reale
+    bookingsRef.on("value", (snapshot) => {
+        allBookings = [];
+        snapshot.forEach(child => {
+            allBookings.push(child.val());
+        });
         renderBookingList();
-    }
+    });
 
     function renderBookingList() {
         const search = document.getElementById("searchInput").value.toLowerCase();
-
-        let bookings = loadBookings();
-
-        // 🔍 Ricerca SENZA cellulare
-        bookings = bookings.filter(b =>
+        let filtered = allBookings.filter(b =>
             b.name.toLowerCase().includes(search) ||
             b.id.toString().includes(search)
         );
 
-        // Contatori
-        document.getElementById("totalBookings").innerText = bookings.length;
-        document.getElementById("pendingBookings").innerText = bookings.filter(b => b.status === "pending").length;
-        document.getElementById("retrievedBookings").innerText = bookings.filter(b => b.status === "retrieved").length;
+        document.getElementById("totalBookings").innerText = filtered.length;
+        document.getElementById("pendingBookings").innerText = filtered.filter(b => b.status === "pending").length;
+        document.getElementById("retrievedBookings").innerText = filtered.filter(b => b.status === "retrieved").length;
 
         const container = document.getElementById("activeBookingsList");
         container.innerHTML = "";
 
-        bookings
+        filtered
             .sort((a, b) => a.status === "pending" ? -1 : 1)
             .forEach(b => {
                 const div = document.createElement("div");
                 div.className = `booking-item ${b.status}`;
-
                 div.innerHTML = `
                     <div>
                         <strong>Ticket #${b.id} (${b.items} capi)</strong><br>
@@ -108,28 +96,36 @@
                         <small>Ingresso: ${b.timeIn}</small>
                     </div>
                     <div>
-                        ${
-                            b.status === "pending"
-                            ? `<button class="action-button" onclick="markRetrieved(${b.id})">Ritirato</button>`
+                        ${b.status === "pending"
+                            ? `<button class="action-button" onclick="markRetrieved('${b.id}')">Ritirato</button>`
                             : `<span class="retrieved-info">Ritirato alle ${b.timeOut}</span>`
                         }
                     </div>
                 `;
-
                 container.appendChild(div);
             });
     }
 
-    function resetDayCounter() {
-        if (confirm("Sei sicuro di voler cancellare TUTTE le prenotazioni?")) {
-            localStorage.removeItem(BOOKINGS_KEY);
-            localStorage.setItem("guardaroba_counter", 1);
-            renderBookingList();
-        }
+    function markRetrieved(ticketId) {
+        const id = parseInt(ticketId);
+        bookingsRef.once("value").then(snapshot => {
+            snapshot.forEach(child => {
+                const booking = child.val();
+                if (booking.id === id && booking.status === "pending") {
+                    const now = new Date();
+                    const timeOut = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}:${now.getSeconds().toString().padStart(2,'0')}`;
+                    child.ref.update({ status: "retrieved", timeOut });
+                }
+            });
+        });
     }
 
-    document.addEventListener("DOMContentLoaded", renderBookingList);
+    function resetDayCounter() {
+        if (confirm("Sei sicuro di voler cancellare TUTTE le prenotazioni del giorno?")) {
+            bookingsRef.remove();
+            db.ref("counter").set(0);
+        }
+    }
 </script>
-
 </body>
 </html>
