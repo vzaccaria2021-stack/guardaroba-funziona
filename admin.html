@@ -21,7 +21,7 @@
         #resetBtn { background-color: #d32f2f; color: #fff; padding: 10px; margin-top:20px; border: none; border-radius: 6px; cursor: pointer; width: 100%; }
     </style>
 
-    <!-- Firebase compatibile -->
+    <!-- Firebase -->
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 </head>
@@ -43,30 +43,28 @@
     </div>
 </div>
 
+<!-- SCRIPT MESSO IN FONDO (dopo tutto l'HTML) → così tutte le funzioni sono definite -->
 <script>
-    // IL TUO CODICE FIREBASE È QUI DENTRO (già inserito e corretto)
     const firebaseConfig = {
-    apiKey: "AIzaSyCU2P3eOGkNvU1TgMnKK3LuD-BwiFEpUGA",
-    authDomain: "guardaroba-funziona-1.firebaseapp.com",
-    databaseURL: "https://guardaroba-funziona-1-default-rtdb.europe-west1.firebasedatabase.app/",
-    projectId: "guardaroba-funziona-1",
-    storageBucket: "guardaroba-funziona-1.appspot.com",
-    messagingSenderId: "432865003672",
-    appId: "1:432865003672:web:526af8c453ae6be544a8ed",
-    measurementId: "G-HV1YPDQ0WY"
-};
+        apiKey: "AIzaSyCU2P3eOGkNvU1TgMnKK3LuD-BwiFEpUGA",
+        authDomain: "guardaroba-funziona-1.firebaseapp.com",
+        databaseURL: "https://guardaroba-funziona-1-default-rtdb.europe-west1.firebasedatabase.app/",
+        projectId: "guardaroba-funziona-1",
+        storageBucket: "guardaroba-funziona-1.appspot.com",
+        messagingSenderId: "432865003672",
+        appId: "1:432865003672:web:526af8c453ae6be544a8ed",
+        measurementId: "G-HV1YPDQ0WY"
     };
 
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
-    const bookingsRef = db.ref("prenotazioni");
+    const bookingsRef = db.ref('prenotazioni');
 
     let allBookings = [];
 
-    // Aggiornamento in tempo reale
-    bookingsRef.on("value", snapshot => {
+    bookingsRef.on('value', (snapshot) => {
         allBookings = [];
-        snapshot.forEach(child => {
+        snapshot.forEach((child) => {
             const b = child.val();
             if (b) allBookings.push(b);
         });
@@ -86,7 +84,7 @@
         const container = document.getElementById("activeBookingsList");
         container.innerHTML = "";
 
-        filtered.sort((a, b) => a.status === "pending" ? -1 : 1).forEach(b => {
+        filtered.sort((a, b) => (a.status === "pending" ? -1 : 1)).forEach(b => {
             const div = document.createElement("div");
             div.className = `booking-item ${b.status}`;
             div.innerHTML = `
@@ -109,7 +107,7 @@
     function markRetrieved(ticketId) {
         const now = new Date();
         const timeOut = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}:${now.getSeconds().toString().padStart(2,'0')}`;
-        bookingsRef.child(ticketId).update({ status: "retrieved", timeOut });
+        bookingsRef.child(ticketId).update({ status: "retrieved", timeOut: timeOut });
     }
 
     function resetDayCounter() {
@@ -121,4 +119,3 @@
 </script>
 </body>
 </html>
-
