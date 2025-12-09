@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Guardaroba - Nuova Prenotazione</title>
-
     <style>
         body { font-family: Arial, sans-serif; background-color: #f0f0f0; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
         #booking-form { background-color: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); max-width: 450px; width: 100%; text-align: center; }
@@ -13,18 +12,18 @@
         .info-section { margin-top: 20px; padding-top: 15px; border-top: 1px dashed #ccc; }
         #currentTicketNum { color: #D32525; font-size: 2.5em; font-weight: bold; display: block; margin: 10px 0; }
     </style>
+
+    <!-- FIREBASE -->
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js"></script>
 </head>
 <body>
-
     <div id="booking-form">
         <h2>Nuova Prenotazione</h2>
-
         <label for="clientName">Nome Cliente:</label>
         <input type="text" id="clientName" placeholder="Mario Rossi" required>
-
         <label for="customerPhone">Cellulare Cliente (es. 39333...):</label>
         <input type="number" id="customerPhone" placeholder="39xxxxxxxxxx" required>
-
         <label for="itemCount">Numero Capi:</label>
         <select id="itemCount">
             <option value="1">1 Capo</option>
@@ -33,9 +32,7 @@
             <option value="4">4 Capi</option>
             <option value="5">5 Capi</option>
         </select>
-
         <button onclick="createBooking()">Genera Ticket</button>
-
         <div id="result-display" style="display:none;" class="info-section">
             <h3>Ticket N°: <span id="currentTicketNum"></span></h3>
             <a id="waLink" href="#" target="_blank" style="color: #25D366; text-decoration: none;">Invia Ticket via WhatsApp</a>
@@ -43,16 +40,27 @@
     </div>
 
     <script>
-        const BOOKINGS_KEY = "guardaroba_prenotazioni";
-        let nextTicketNumber = parseInt(localStorage.getItem("guardaroba_counter") || 1);
+        // SOSTITUISCI CON I TUOI VALORI (li trovi nella console Firebase)
+        const firebaseConfig = {
+            apiKey: "inserisci-tua-api-key",
+            authDomain: "tuo-progetto.firebaseapp.com",
+            databaseURL: "https://tuo-progetto-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "tuo-progetto",
+            storageBucket: "tuo-progetto.appspot.com",
+            messagingSenderId: "123456789",
+            appId: "1:123456789:web:abcdef123456"
+        };
 
-        function loadBookings() {
-            return JSON.parse(localStorage.getItem(BOOKINGS_KEY) || "[]");
-        }
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        const bookingsRef = db.ref("prenotazioni");
+        const counterRef = db.ref("counter");
 
-        function saveBookings(bookings) {
-            localStorage.setItem(BOOKINGS_KEY, JSON.stringify(bookings));
-        }
+        // Carica il prossimo numero ticket
+        let nextTicketNumber = 1;
+        counterRef.once("value").then(snap => {
+            nextTicketNumber = (snap.val() || 0) + 1;
+        });
 
         function createBooking() {
             const name = document.getElementById("clientName").value.trim();
@@ -65,8 +73,6 @@
             }
 
             const ticketNumber = nextTicketNumber++;
-            localStorage.setItem("guardaroba_counter", nextTicketNumber);
-
             const now = new Date();
             const timeIn = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
 
@@ -80,30 +86,22 @@
                 timeOut: null
             };
 
-            const bookings = loadBookings();
-            bookings.push(newBooking);
-            saveBookings(bookings);
+            // Salva su Firebase
+            bookingsRef.push(newBooking);
+            counterRef.set(ticketNumber);  // aggiorna contatore globale
 
+            // Mostra ticket
             document.getElementById("currentTicketNum").innerText = ticketNumber;
             document.getElementById("result-display").style.display = "block";
 
-            // 🔥 MESSAGGIO SENZA QR CODE
-            const message =
-                `Ciao ${name}!\n` +
-                `Il tuo deposito è confermato.\n` +
-                `Ticket n°: *${ticketNumber}*\n` +
-                `Capi: ${itemCount}\n` +
-                `Ora deposito: ${timeIn}`;
+            const message = `Ciao ${name}!\nIl tuo deposito è confermato.\nTicket n°: *${ticketNumber}*\nCapi: ${itemCount}\nOra deposito: ${timeIn}`;
+            document.getElementById("waLink").href = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
 
-            document.getElementById("waLink").href =
-                `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
-
-            // reset form
+            // Reset form
             document.getElementById("clientName").value = "";
             document.getElementById("customerPhone").value = "";
             document.getElementById("itemCount").value = "1";
         }
     </script>
-
 </body>
 </html>
