@@ -6,16 +6,16 @@
     <title>Guardaroba - Nuova Prenotazione</title>
     <style>
         body { font-family: Arial, sans-serif; background-color: #f0f0f0; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
-        #booking-form { background-color: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); max-width: 450px; width: 100%; text-align: center; }
+        #booking-form { background-color: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); max-width: 450px; width: 100%; text-align: center; }
         input[type="text"], input[type="number"], select { padding: 10px; width: 100%; margin: 8px 0 15px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
         button { padding: 12px 25px; background-color: #25D366; color: white; border: none; font-size: 16px; cursor: pointer; border-radius: 6px; width: 100%; margin-bottom: 15px;}
         .info-section { margin-top: 20px; padding-top: 15px; border-top: 1px dashed #ccc; }
         #currentTicketNum { color: #D32525; font-size: 2.5em; font-weight: bold; display: block; margin: 10px 0; }
     </style>
 
-    <!-- FIREBASE -->
-    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js"></script>
+    <!-- Firebase compatibile (senza errori di import) -->
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 </head>
 <body>
     <div id="booking-form">
@@ -40,15 +40,16 @@
     </div>
 
     <script>
-        // SOSTITUISCI CON I TUOI VALORI REALI DALLA CONSOLE FIREBASE!
+        // IL TUO CODICE FIREBASE È QUI DENTRO (già inserito e corretto)
         const firebaseConfig = {
-            apiKey: "inserisci-tua-api-key",
-            authDomain: "tuo-progetto.firebaseapp.com",
-            databaseURL: "https://tuo-progetto-default-rtdb.europe-west1.firebasedatabase.app",
-            projectId: "tuo-progetto",
-            storageBucket: "tuo-progetto.appspot.com",
-            messagingSenderId: "123456789",
-            appId: "1:123456789:web:abcdef123456"
+            apiKey: "AIzaSyCU2P3eOGkNvU1TgMnKK3LuD-BwiFEpUGA",
+            authDomain: "guardaroba-funziona-1.firebaseapp.com",
+            databaseURL: "https://guardaroba-funziona-1-default-rtdb.firebaseio.com",
+            projectId: "guardaroba-funziona-1",
+            storageBucket: "guardaroba-funziona-1.appspot.com",
+            messagingSenderId: "432865003672",
+            appId: "1:432865003672:web:526af8c453ae6be544a8ed",
+            measurementId: "G-HV1YPDQ0WY"
         };
 
         firebase.initializeApp(firebaseConfig);
@@ -56,7 +57,7 @@
         const bookingsRef = db.ref("prenotazioni");
         const counterRef = db.ref("counter");
 
-        async function createBooking() {
+        function createBooking() {
             const name = document.getElementById("clientName").value.trim();
             const phone = document.getElementById("customerPhone").value.trim();
             const itemCount = document.getElementById("itemCount").value;
@@ -66,46 +67,42 @@
                 return;
             }
 
-            try {
-                // Genera ticket number in modo atomico (sicuro per multi-utenti)
-                const committed = await counterRef.transaction(current => (current || 0) + 1);
-                if (!committed.committed) {
-                    alert("Errore nel generare ticket. Riprova.");
+            // Incrementa il contatore e crea il ticket
+            counterRef.transaction(current => (current || 0) + 1, (error, committed, snapshot) => {
+                if (error || !committed) {
+                    alert("Errore nel generare il ticket. Riprova.");
                     return;
                 }
-                const ticketNumber = committed.snapshot.val();
 
+                const ticketNumber = snapshot.val();
                 const now = new Date();
-                const timeIn = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+                const timeIn = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
 
                 const newBooking = {
                     id: ticketNumber,
-                    name,
-                    phone,
+                    name: name,
+                    phone: phone,
                     items: itemCount,
-                    timeIn,
+                    timeIn: timeIn,
                     status: "pending",
                     timeOut: null
                 };
 
-                // Salva usando ticketNumber come chiave
+                // Salva la prenotazione
                 bookingsRef.child(ticketNumber).set(newBooking);
 
-                // Mostra ticket
+                // Mostra risultato
                 document.getElementById("currentTicketNum").innerText = ticketNumber;
                 document.getElementById("result-display").style.display = "block";
 
                 const message = `Ciao ${name}!\nIl tuo deposito è confermato.\nTicket n°: *${ticketNumber}*\nCapi: ${itemCount}\nOra deposito: ${timeIn}`;
                 document.getElementById("waLink").href = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
 
-                // Reset form
+                // Pulisci form
                 document.getElementById("clientName").value = "";
                 document.getElementById("customerPhone").value = "";
                 document.getElementById("itemCount").value = "1";
-            } catch (error) {
-                console.error("Errore:", error);
-                alert("Problema con Firebase. Controlla la console e la configurazione.");
-            }
+            });
         }
     </script>
 </body>
