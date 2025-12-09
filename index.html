@@ -13,7 +13,7 @@
         #currentTicketNum { color: #D32525; font-size: 2.5em; font-weight: bold; display: block; margin: 10px 0; }
     </style>
 
-    <!-- Firebase compatibile (senza errori di import) -->
+    <!-- Firebase -->
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 </head>
@@ -39,23 +39,28 @@
         </div>
     </div>
 
+    <!-- SCRIPT MESSO IN FONDO (dopo il pulsante) → così createBooking esiste! -->
     <script>
-        // IL TUO CODICE FIREBASE È QUI DENTRO (già inserito e corretto)
         const firebaseConfig = {
-    apiKey: "AIzaSyCU2P3eOGkNvU1TgMnKK3LuD-BwiFEpUGA",
-    authDomain: "guardaroba-funziona-1.firebaseapp.com",
-    databaseURL: "https://guardaroba-funziona-1-default-rtdb.europe-west1.firebasedatabase.app/",
-    projectId: "guardaroba-funziona-1",
-    storageBucket: "guardaroba-funziona-1.appspot.com",
-    messagingSenderId: "432865003672",
-    appId: "1:432865003672:web:526af8c453ae6be544a8ed",
-    measurementId: "G-HV1YPDQ0WY"
-};};
+            apiKey: "AIzaSyCU2P3eOGkNvU1TgMnKK3LuD-BwiFEpUGA",
+            authDomain: "guardaroba-funziona-1.firebaseapp.com",
+            databaseURL: "https://guardaroba-funziona-1-default-rtdb.europe-west1.firebasedatabase.app/",
+            projectId: "guardaroba-funziona-1",
+            storageBucket: "guardaroba-funziona-1.appspot.com",
+            messagingSenderId: "432865003672",
+            appId: "1:432865003672:web:526af8c453ae6be544a8ed",
+            measurementId: "G-HV1YPDQ0WY"
+        };
 
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
-        const bookingsRef = db.ref("prenotazioni");
-        const counterRef = db.ref("counter");
+        const bookingsRef = db.ref('prenotazioni');
+        const counterRef = db.ref('counter');
+
+        let nextTicketNumber = 1;
+        counterRef.once('value', (snapshot) => {
+            nextTicketNumber = (snapshot.val() || 0) + 1;
+        });
 
         function createBooking() {
             const name = document.getElementById("clientName").value.trim();
@@ -67,44 +72,35 @@
                 return;
             }
 
-            // Incrementa il contatore e crea il ticket
-            counterRef.transaction(current => (current || 0) + 1, (error, committed, snapshot) => {
-                if (error || !committed) {
-                    alert("Errore nel generare il ticket. Riprova.");
-                    return;
-                }
+            const ticketNumber = nextTicketNumber++;
+            const now = new Date();
+            const timeIn = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
 
-                const ticketNumber = snapshot.val();
-                const now = new Date();
-                const timeIn = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
+            const newBooking = {
+                id: ticketNumber,
+                name: name,
+                phone: phone,
+                items: itemCount,
+                timeIn: timeIn,
+                status: "pending",
+                timeOut: null
+            };
 
-                const newBooking = {
-                    id: ticketNumber,
-                    name: name,
-                    phone: phone,
-                    items: itemCount,
-                    timeIn: timeIn,
-                    status: "pending",
-                    timeOut: null
-                };
-
-                // Salva la prenotazione
-                bookingsRef.child(ticketNumber).set(newBooking);
-
-                // Mostra risultato
+            bookingsRef.child(ticketNumber).set(newBooking).then(() => {
+                counterRef.set(ticketNumber);
                 document.getElementById("currentTicketNum").innerText = ticketNumber;
                 document.getElementById("result-display").style.display = "block";
 
                 const message = `Ciao ${name}!\nIl tuo deposito è confermato.\nTicket n°: *${ticketNumber}*\nCapi: ${itemCount}\nOra deposito: ${timeIn}`;
                 document.getElementById("waLink").href = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
 
-                // Pulisci form
                 document.getElementById("clientName").value = "";
                 document.getElementById("customerPhone").value = "";
                 document.getElementById("itemCount").value = "1";
-            });
+
+                alert("Ticket generato e salvato su tutti i dispositivi!");
+            }).catch(err => alert("Errore: " + err.message));
         }
     </script>
 </body>
 </html>
-
