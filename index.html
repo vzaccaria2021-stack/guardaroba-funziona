@@ -40,7 +40,7 @@
     </div>
 
     <script>
-        // SOSTITUISCI CON I TUOI VALORI (li trovi nella console Firebase)
+        // SOSTITUISCI CON I TUOI VALORI REALI DALLA CONSOLE FIREBASE!
         const firebaseConfig = {
             apiKey: "inserisci-tua-api-key",
             authDomain: "tuo-progetto.firebaseapp.com",
@@ -56,13 +56,7 @@
         const bookingsRef = db.ref("prenotazioni");
         const counterRef = db.ref("counter");
 
-        // Carica il prossimo numero ticket
-        let nextTicketNumber = 1;
-        counterRef.once("value").then(snap => {
-            nextTicketNumber = (snap.val() || 0) + 1;
-        });
-
-        function createBooking() {
+        async function createBooking() {
             const name = document.getElementById("clientName").value.trim();
             const phone = document.getElementById("customerPhone").value.trim();
             const itemCount = document.getElementById("itemCount").value;
@@ -72,35 +66,46 @@
                 return;
             }
 
-            const ticketNumber = nextTicketNumber++;
-            const now = new Date();
-            const timeIn = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+            try {
+                // Genera ticket number in modo atomico (sicuro per multi-utenti)
+                const committed = await counterRef.transaction(current => (current || 0) + 1);
+                if (!committed.committed) {
+                    alert("Errore nel generare ticket. Riprova.");
+                    return;
+                }
+                const ticketNumber = committed.snapshot.val();
 
-            const newBooking = {
-                id: ticketNumber,
-                name,
-                phone,
-                items: itemCount,
-                timeIn,
-                status: "pending",
-                timeOut: null
-            };
+                const now = new Date();
+                const timeIn = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
 
-            // Salva su Firebase
-            bookingsRef.push(newBooking);
-            counterRef.set(ticketNumber);  // aggiorna contatore globale
+                const newBooking = {
+                    id: ticketNumber,
+                    name,
+                    phone,
+                    items: itemCount,
+                    timeIn,
+                    status: "pending",
+                    timeOut: null
+                };
 
-            // Mostra ticket
-            document.getElementById("currentTicketNum").innerText = ticketNumber;
-            document.getElementById("result-display").style.display = "block";
+                // Salva usando ticketNumber come chiave
+                bookingsRef.child(ticketNumber).set(newBooking);
 
-            const message = `Ciao ${name}!\nIl tuo deposito è confermato.\nTicket n°: *${ticketNumber}*\nCapi: ${itemCount}\nOra deposito: ${timeIn}`;
-            document.getElementById("waLink").href = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+                // Mostra ticket
+                document.getElementById("currentTicketNum").innerText = ticketNumber;
+                document.getElementById("result-display").style.display = "block";
 
-            // Reset form
-            document.getElementById("clientName").value = "";
-            document.getElementById("customerPhone").value = "";
-            document.getElementById("itemCount").value = "1";
+                const message = `Ciao ${name}!\nIl tuo deposito è confermato.\nTicket n°: *${ticketNumber}*\nCapi: ${itemCount}\nOra deposito: ${timeIn}`;
+                document.getElementById("waLink").href = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+
+                // Reset form
+                document.getElementById("clientName").value = "";
+                document.getElementById("customerPhone").value = "";
+                document.getElementById("itemCount").value = "1";
+            } catch (error) {
+                console.error("Errore:", error);
+                alert("Problema con Firebase. Controlla la console e la configurazione.");
+            }
         }
     </script>
 </body>
