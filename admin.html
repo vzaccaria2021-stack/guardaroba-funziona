@@ -44,7 +44,7 @@
 </div>
 
 <script>
-    // STESSA CONFIGURAZIONE DI INDEX.HTML (copia-incolla uguale)
+    // STESSA CONFIGURAZIONE DI INDEX.HTML (SOSTITUISCI CON VALORI REALI!)
     const firebaseConfig = {
         apiKey: "inserisci-tua-api-key",
         authDomain: "tuo-progetto.firebaseapp.com",
@@ -58,6 +58,7 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
     const bookingsRef = db.ref("prenotazioni");
+    const counterRef = db.ref("counter");
 
     let allBookings = [];
 
@@ -65,7 +66,10 @@
     bookingsRef.on("value", (snapshot) => {
         allBookings = [];
         snapshot.forEach(child => {
-            allBookings.push(child.val());
+            const booking = child.val();
+            if (booking) {  // Evita null
+                allBookings.push(booking);
+            }
         });
         renderBookingList();
     });
@@ -97,7 +101,7 @@
                     </div>
                     <div>
                         ${b.status === "pending"
-                            ? `<button class="action-button" onclick="markRetrieved('${b.id}')">Ritirato</button>`
+                            ? `<button class="action-button" onclick="markRetrieved(${b.id})">Ritirato</button>`
                             : `<span class="retrieved-info">Ritirato alle ${b.timeOut}</span>`
                         }
                     </div>
@@ -107,23 +111,15 @@
     }
 
     function markRetrieved(ticketId) {
-        const id = parseInt(ticketId);
-        bookingsRef.once("value").then(snapshot => {
-            snapshot.forEach(child => {
-                const booking = child.val();
-                if (booking.id === id && booking.status === "pending") {
-                    const now = new Date();
-                    const timeOut = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}:${now.getSeconds().toString().padStart(2,'0')}`;
-                    child.ref.update({ status: "retrieved", timeOut });
-                }
-            });
-        });
+        const now = new Date();
+        const timeOut = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}:${now.getSeconds().toString().padStart(2,'0')}`;
+        bookingsRef.child(ticketId).update({ status: "retrieved", timeOut });
     }
 
     function resetDayCounter() {
         if (confirm("Sei sicuro di voler cancellare TUTTE le prenotazioni del giorno?")) {
             bookingsRef.remove();
-            db.ref("counter").set(0);
+            counterRef.set(0);
         }
     }
 </script>
