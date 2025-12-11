@@ -5,32 +5,93 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Guardaroba - Nuova Prenotazione</title>
     <style>
-        body { font-family: Arial, sans-serif; background-color: #f0f0f0; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
-        #booking-form { background-color: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); max-width: 450px; width: 100%; text-align: center; }
-        input[type="text"], input[type="number"], select { padding: 10px; width: 100%; margin: 8px 0 15px; border:1px solid #ccc; border-radius:6px; box-sizing:border-box; }
-        button { padding:12px 25px; background-color:#25D366; color:white; border:none; font-size:16px; cursor:pointer; border-radius:6px; width:100%; margin-top:10px;}
-        .info-section { margin-top:20px; padding-top:15px; border-top:1px dashed #ccc; }
-        #currentTicketNum { color:#D32525; font-size:2.5em; font-weight:bold; display:block; margin:10px 0; }
-        #status { margin-top:10px; color:#25D366; font-weight:bold; }
-
-        /* Stile checkbox privacy */
-        .privacy-box {
-            text-align: left;
-            margin: 20px 0 10px;
-            font-size: 14px;
-            line-height: 1.4;
+        body { 
+            font-family: Arial, sans-serif; 
+            background-color: #f0f0f0; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            min-height: 100vh; 
+            margin: 0; 
+            padding: 20px;
+            box-sizing: border-box;
         }
-        .privacy-box label {
-            cursor: pointer;
+        #booking-form { 
+            background: white; 
+            padding: 35px; 
+            border-radius: 16px; 
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1); 
+            max-width: 460px; 
+            width: 100%; 
+        }
+        h2 { margin-top: 0; color: #333; text-align: center; }
+        label { 
+            display: block; 
+            margin: 18px 0 6px; 
+            font-weight: 600; 
+            color: #444; 
+        }
+        input[type="text"], 
+        input[type="number"], 
+        select { 
+            width: 100%; 
+            padding: 13px; 
+            border: 1.5px solid #ccc; 
+            border-radius: 10px; 
+            font-size: 16px; 
+            box-sizing: border-box; 
+        }
+        button { 
+            margin-top: 20px; 
+            padding: 15px; 
+            background: #25D366; 
+            color: white; 
+            border: none; 
+            border-radius: 10px; 
+            font-size: 18px; 
+            font-weight: bold; 
+            cursor: pointer; 
+            width: 100%; 
+        }
+        button:hover { background: #1da851; }
+
+        /* Privacy pulita e compatta */
+        .privacy-container {
+            background: #f8fff8;
+            padding: 16px;
+            border-radius: 10px;
+            margin: 20px 0 5px 0; /* ← spazio ridotto sotto */
+            border: 1px solid #d0ebd0;
+            font-size: 14.5px;
+            line-height: 1.5;
+        }
+        .privacy-container label {
             display: flex;
             align-items: flex-start;
+            cursor: pointer;
+            margin: 0;
         }
-        .privacy-box input[type="checkbox"] {
-            margin-right: 10px;
-            transform: scale(1.3);
-            margin-top: 2px;
+        .privacy-container input[type="checkbox"] {
+            margin-right: 12px;
+            transform: scale(1.4);
+            margin-top: 3px;
+            flex-shrink: 0;
         }
-        .privacy-link { color: #25D366; text-decoration: underline; }
+        .privacy-link { color: #25D366; font-weight: bold; }
+
+        .info-section { 
+            margin-top: 25px; 
+            padding: 20px; 
+            background: #f9f9f9; 
+            border-radius: 12px; 
+            text-align: center;
+        }
+        #currentTicketNum { 
+            font-size: 3.2em; 
+            font-weight: bold; 
+            color: #D32525; 
+        }
+        #status { margin: 15px 0; font-weight: bold; }
     </style>
 
     <!-- Firebase -->
@@ -41,13 +102,13 @@
     <div id="booking-form">
         <h2>Nuova Prenotazione Guardaroba</h2>
 
-        <label for="clientName">Nome Cliente:</label>
-        <input type="text" id="clientName" placeholder="Mario Rossi" required>
+        <label for="clientName">Nome Cliente</label>
+        <input type="text" id="clientName" placeholder="Mario Rossi">
 
-        <label for="customerPhone">Cellulare Cliente:</label>
-        <input type="number" id="customerPhone" placeholder="393331234567" required>
+        <label for="customerPhone">Cellulare</label>
+        <input type="number" id="customerPhone" placeholder="393331234567">
 
-        <label for="itemCount">Numero Capi:</label>
+        <label for="itemCount">Numero Capi</label>
         <select id="itemCount">
             <option value="1">1 Capo</option>
             <option value="2">2 Capi</option>
@@ -56,30 +117,34 @@
             <option value="5">5 Capi</option>
         </select>
 
-        <!-- CHECKBOX CONSENSO PRIVACY OBBLIGATORIA -->
-        <div class="privacy-box">
+        <!-- PRIVACY COMPATTA E PERFETTA -->
+        <div class="privacy-container">
             <label>
                 <input type="checkbox" id="privacyConsent" required>
-                Acconsento al trattamento dei miei dati personali (nome e numero di telefono) per la gestione del servizio guardaroba e per ricevere il ticket via WhatsApp.
-                <br><br>
-                <strong>Informativa privacy</strong>: i tuoi dati saranno conservati solo per il tempo necessario al ritiro dei capi e cancellati automaticamente dopo 30 giorni.
-                <a href="https://tuosito.it/privacy" target="_blank" class="privacy-link">Leggi informativa completa</a>
+                <span>
+                    <strong>Acconsento</strong> al trattamento di nome e telefono<br>
+                    per ricevere il ticket WhatsApp e gestire il deposito.
+                    <br><br>
+                    <small>Dati conservati solo fino al ritiro e cancellati dopo 30 giorni. 
+                    <a href="https://tuosito.it/privacy" target="_blank" class="privacy-link">Informativa completa</a></small>
+                </span>
             </label>
         </div>
 
         <button onclick="createBooking()">Genera Ticket + Invia WhatsApp</button>
 
         <div id="result-display" style="display:none;" class="info-section">
-            <h3>Ticket N°: <span id="currentTicketNum"></span></h3>
+            <div>Ticket N°</div>
+            <div id="currentTicketNum"></div>
             <p id="status"></p>
-            <a id="waLink" href="#" target="_blank" style="color:#25D366; text-decoration:none;">
-                Apri chat WhatsApp (se automatico fallisce)
+            <a id="waLink" href="#" target="_blank" style="color:#25D366; font-weight:bold;">
+                Apri WhatsApp (fallback manuale)
             </a>
         </div>
     </div>
 
     <script>
-        // ================== CONFIGURAZIONE FIREBASE ==================
+        // Firebase
         const firebaseConfig = {
             apiKey: "AIzaSyCU2P3eOGkNvU1TgMnKK3LuD-BwiFEpUGA",
             authDomain: "guardaroba-funziona-1.firebaseapp.com",
@@ -94,22 +159,19 @@
         const bookingsRef = db.ref('prenotazioni');
         const counterRef = db.ref('counter');
 
-        // ================== CONFIGURAZIONE WHATSAPP BUSINESS API ==================
-        const WHATSAPP_TOKEN = "IL_TUO_TOKEN_PERMANENTE_QUI";
+        // WhatsApp Business API - INSERISCI I TUOI DATI
+        const WHATSAPP_TOKEN = "IL_TUO_TOKEN_PERMANENTE";
         const PHONE_NUMBER_ID = "IL_TUO_PHONE_NUMBER_ID";
-        const TEMPLATE_NAME = "ticket_guardaroba";   // deve esistere e essere approvato
+        const TEMPLATE_NAME = "ticket_guardaroba";
 
         let nextTicketNumber = 1;
-        counterRef.once('value', (snapshot) => {
-            nextTicketNumber = (snapshot.val() || 0) + 1;
-        });
+        counterRef.once('value', s => nextTicketNumber = (s.val() || 0) + 1);
 
-        // Funzione invio WhatsApp Business API (template)
-        async function sendWhatsAppTemplate(toPhone, name, ticket, items, timeIn) {
+        async function sendWhatsAppTemplate(to, name, ticket, items, time) {
             const url = `https://graph.facebook.com/v20.0/${PHONE_NUMBER_ID}/messages`;
             const payload = {
                 messaging_product: "whatsapp",
-                to: toPhone,
+                to: to,
                 type: "template",
                 template: {
                     name: TEMPLATE_NAME,
@@ -120,84 +182,71 @@
                             { type: "text", text: name },
                             { type: "text", text: ticket.toString() },
                             { type: "text", text: items },
-                            { type: "text", text: timeIn }
+                            { type: "text", text: time }
                         ]
                     }]
                 }
             };
 
-            try {
-                const res = await fetch(url, {
-                    method: "POST",
-                    headers: {
-                        "Authorization": `Bearer ${WHATSAPP_TOKEN}`,
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify(payload)
-                });
-                const data = await res.json();
-                return res.ok ? {success: true, data} : {success: false, error: data.error?.message || JSON.stringify(data)};
-            } catch (err) {
-                return {success: false, error: err.message};
-            }
+            const res = await fetch(url, {
+                method: "POST",
+                headers: { 
+                    "Authorization": `Bearer ${WHATSAPP_TOKEN}`, 
+                    "Content-Type": "application/json" 
+                },
+                body: JSON.stringify(payload)
+            });
+            return res.ok ? {success:true} : {success:false, error: (await res.json()).error?.message || "Errore"};
         }
 
         async function createBooking() {
             const name = document.getElementById("clientName").value.trim();
             const phone = document.getElementById("customerPhone").value.trim();
-            const itemCount = document.getElementById("itemCount").value;
-            const privacyOk = document.getElementById("privacyConsent").checked;
+            const items = document.getElementById("itemCount").value;
+            const consent = document.getElementById("privacyConsent").checked;
 
-            // Validazione
-            if (!name || phone.length < 10 || !privacyOk) {
-                alert("Compila tutti i campi e accetta l'informativa privacy per continuare.");
+            if (!name || phone.length < 10 || !consent) {
+                alert("Compila tutti i campi e accetta la privacy");
                 return;
             }
 
-            const ticketNumber = nextTicketNumber++;
-            const now = new Date();
-            const timeIn = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
+            const ticket = nextTicketNumber++;
+            const timeIn = new Date().toLocaleTimeString('it-IT', {hour:'2-digit', minute:'2-digit'});
 
-            const newBooking = {
-                id: ticketNumber,
-                name, phone, items: itemCount,
-                timeIn, status: "pending", timeOut: null,
+            const booking = {
+                id: ticket, name, phone, items, timeIn,
+                status: "pending",
                 privacyConsent: true,
                 consentTimestamp: firebase.database.ServerValue.TIMESTAMP
             };
 
             try {
-                // 1. Salva su Firebase
-                await bookingsRef.child(ticketNumber).set(newBooking);
-                await counterRef.set(ticketNumber);
+                await bookingsRef.child(ticket).set(booking);
+                await counterRef.set(ticket);
 
-                // 2. Invia WhatsApp automatico
-                document.getElementById("status").textContent = "Invio messaggio WhatsApp…";
+                document.getElementById("currentTicketNum").innerText = ticket;
                 document.getElementById("result-display").style.display = "block";
-                document.getElementById("currentTicketNum").innerText = ticketNumber;
+                document.getElementById("status").innerHTML = "Invio in corso…";
 
-                const waResult = await sendWhatsAppTemplate(phone, name, ticketNumber, itemCount, timeIn);
+                const wa = await sendWhatsAppTemplate(phone, name, ticket, items, timeIn);
 
-                if (waResult.success) {
-                    document.getElementById("status").innerHTML = "Ticket generato e messaggio inviato automaticamente!";
-                    document.getElementById("status").style.color = "#25D366";
-                } else {
-                    document.getElementById("status").innerHTML = `Errore invio automatico:<br>${waResult.error}<br><small>Usa il link qui sotto</small>`;
-                    document.getElementById("status").style.color = "#D32525";
-                }
+                document.getElementById("status").innerHTML = wa.success 
+                    ? "Ticket generato e inviato automaticamente!"
+                    : `Errore invio automatico<br><small>Usa il link sotto</small>`;
+                document.getElementById("status").style.color = wa.success ? "#25D366" : "#D32525";
 
-                // Fallback manuale
-                const manualMsg = `Ciao ${encodeURIComponent(name)}!%0aIl tuo deposito è confermato.%0aTicket n°: *${ticketNumber}*%0aCapi: ${itemCount}%0aOra: ${timeIn}%0aGrazie!`;
-                document.getElementById("waLink").href = `https://wa.me/${phone}?text=${manualMsg}`;
+                // Fallback wa.me
+                const msg = `Ciao ${encodeURIComponent(name)}!%0aTicket n° *${ticket}*%0aCapi: ${items}%0aOra deposito: ${timeIn}%0aGrazie e buona serata!`;
+                document.getElementById("waLink").href = `https://wa.me/${phone}?text=${msg}`;
 
-                // Pulizia form
+                // Reset
                 document.getElementById("clientName").value = "";
                 document.getElementById("customerPhone").value = "";
                 document.getElementById("itemCount").value = "1";
                 document.getElementById("privacyConsent").checked = false;
 
-            } catch (err) {
-                alert("Errore: " + err.message);
+            } catch (e) {
+                alert("Errore: " + e.message);
             }
         }
     </script>
