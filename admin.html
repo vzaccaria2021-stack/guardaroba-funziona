@@ -3,124 +3,146 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestione Guardaroba - Ticket Pendenti</title>
+    <title>Area Amministrativa Guardaroba</title>
     <style>
-        body { 
-            font-family: Arial, sans-serif; 
-            background: #f4f4f4; 
-            margin: 0; 
-            padding: 20px; 
-        }
+        body { font-family: Arial, sans-serif; background-color: #f0f0f0; margin: 0; padding: 20px; }
+        .container { max-width: 1000px; margin: auto; }
+        .dashboard { background-color: white; padding: 25px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
         h1 { text-align: center; color: #333; }
-        #pending-list { 
-            max-width: 800px; 
-            margin: 0 auto; 
-        }
-        .ticket { 
-            background: white; 
-            padding: 15px; 
-            margin: 10px 0; 
-            border-radius: 10px; 
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1); 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-        }
-        .ticket-info { font-size: 18px; }
-        .ticket-id { font-size: 24px; font-weight: bold; color: #D32525; }
-        .delivered-btn { 
-            padding: 10px 20px; 
-            background: #25D366; 
-            color: white; 
-            border: none; 
-            border-radius: 8px; 
-            cursor: pointer; 
-            font-size: 16px; 
-        }
-        .delivered-btn:hover { background: #1da851; }
-        #no-tickets { text-align: center; color: #888; font-size: 20px; margin-top: 50px; }
+        .header-stats { display: flex; justify-content: space-around; margin-bottom: 20px; padding: 15px; background-color: #e8f5e9; border-radius: 6px; border: 1px solid #c8e6c9; }
+        .stat span { font-size: 2em; font-weight: bold; color: #388e3c; }
+        .search-box { margin: 20px 0; text-align: center; }
+        .search-box input { width: 90%; padding: 12px; font-size: 16px; border-radius: 6px; border: 1px solid #bbb; }
+        .booking-item { border: 1px solid #ddd; padding: 15px; margin-bottom: 10px; border-radius: 6px; background: #fff; display: flex; justify-content: space-between; align-items: center; }
+        .booking-item.retrieved { background-color: #f1f8e9; opacity: 0.7; }
+        .action-button { padding: 8px 15px; background-color: #ff9800; color: #fff; border: none; border-radius: 6px; cursor: pointer; }
+        .action-button:hover { background-color: #fb8c00; }
+        .retrieved-info { font-size: 0.9em; color: #2e7d32; font-weight: bold; }
+        #resetBtn { background-color: #d32f2f; color: #fff; padding: 10px; margin-top:20px; border: none; border-radius: 6px; cursor: pointer; width: 100%; }
     </style>
-
     <!-- Firebase -->
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 </head>
 <body>
-    <h1>Gestione Guardaroba - Ticket in Attesa</h1>
-    <div id="pending-list">
-        <div id="no-tickets">Caricamento...</div>
+<div class="container">
+    <div class="dashboard">
+        <h1>Dashboard Guardaroba</h1>
+        <div class="header-stats">
+            <div class="stat">Totali: <span id="totalBookings">0</span></div>
+            <div class="stat">Da ritirare: <span id="pendingBookings">0</span></div>
+            <div class="stat">Ritirati: <span id="retrievedBookings">0</span></div>
+        </div>
+        <div class="search-box">
+            <input type="text" id="searchInput" placeholder="Cerca per numero ticket o nome..." oninput="renderBookingList()">
+        </div>
+        <h2>Lista Prenotazioni</h2>
+        <div id="activeBookingsList"></div>
+        <button id="resetBtn" onclick="resetDayCounter()">Resetta Tutto (cancella prenotazioni)</button>
     </div>
+</div>
 
-    <script>
-        const firebaseConfig = {
-            apiKey: "AIzaSyCU2P3eOGkNvU1TgMnKK3LuD-BwiFEpUGA",
-            authDomain: "guardaroba-funziona-1.firebaseapp.com",
-            databaseURL: "https://guardaroba-funziona-1-default-rtdb.europe-west1.firebasedatabase.app",
-            projectId: "guardaroba-funziona-1",
-            storageBucket: "guardaroba-funziona-1.appspot.com",
-            messagingSenderId: "432865003672",
-            appId: "1:432865003672:web:526af8c453ae6be544a8ed"
-        };
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.database();
+<script>
+    const firebaseConfig = {
+        apiKey: "AIzaSyCU2P3eOGkNvU1TgMnKK3LuD-BwiFEpUGA",
+        authDomain: "guardaroba-funziona-1.firebaseapp.com",
+        databaseURL: "https://guardaroba-funziona-1-default-rtdb.europe-west1.firebasedatabase.app/",
+        projectId: "guardaroba-funziona-1",
+        storageBucket: "guardaroba-funziona-1.appspot.com",
+        messagingSenderId: "432865003672",
+        appId: "1:432865003672:web:526af8c453ae6be544a8ed",
+        measurementId: "G-HV1YPDQ0WY"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
 
-        // Nuovo nodo visibile (pubblico in lettura)
-        const bookingsRef = db.ref('prenotazioni_visibili');
+    // LEGGE DAL NODO VISIBILE (sicuro)
+    const visibleRef = db.ref('prenotazioni_visibili');
+    const counterRef = db.ref('counter');
 
-        const pendingList = document.getElementById('pending-list');
+    let allBookings = [];
+    let currentCounter = 0;
 
-        function renderTickets(snapshot) {
-            const tickets = [];
-            snapshot.forEach(child => {
-                const data = child.val();
-                if (data.status === "pending") {
-                    tickets.push({ key: child.key, ...data });
-                }
-            });
+    // Carica il counter per calcolare i ritirati
+    counterRef.on('value', (snap) => {
+        currentCounter = snap.val() || 0;
+        updateStats();
+    });
 
-            // Ordina per ora deposito (più recente sopra)
-            tickets.sort((a, b) => b.id - a.id);
+    // Listener realtime sui ticket visibili
+    visibleRef.on('value', (snapshot) => {
+        allBookings = [];
+        snapshot.forEach((child) => {
+            const b = child.val();
+            if (b) allBookings.push({ ...b, key: child.key });
+        });
+        renderBookingList();
+    });
 
-            if (tickets.length === 0) {
-                pendingList.innerHTML = '<div id="no-tickets">Nessun ticket in attesa al momento 🎉</div>';
-                return;
-            }
+    function renderBookingList() {
+        const search = document.getElementById("searchInput").value.toLowerCase();
+        const filtered = allBookings.filter(b =>
+            b.name.toLowerCase().includes(search) || b.id.toString().includes(search)
+        );
 
-            pendingList.innerHTML = '';
-            tickets.forEach(ticket => {
-                const div = document.createElement('div');
-                div.className = 'ticket';
-                div.innerHTML = `
-                    <div class="ticket-info">
-                        <div class="ticket-id">Ticket N° ${ticket.id}</div>
-                        <div><strong>Nome:</strong> ${ticket.name}</div>
-                        <div><strong>Capi:</strong> ${ticket.items}</div>
-                        <div><strong>Ora deposito:</strong> ${ticket.timeIn}</div>
-                    </div>
-                    <button class="delivered-btn" onclick="markAsDelivered('${ticket.key}')">
-                        Consegnato
-                    </button>
-                `;
-                pendingList.appendChild(div);
-            });
-        }
+        // Pending = ancora presenti, Retrieved = totali creati meno pending
+        const pending = filtered.length;
+        const retrieved = currentCounter - pending;
 
-        // Listener in tempo reale
-        bookingsRef.on('value', renderTickets, err => {
-            pendingList.innerHTML = `<div id="no-tickets">Errore connessione: ${err.message}</div>`;
+        document.getElementById("totalBookings").innerText = currentCounter;
+        document.getElementById("pendingBookings").innerText = pending;
+        document.getElementById("retrievedBookings").innerText = retrieved;
+
+        const container = document.getElementById("activeBookingsList");
+        container.innerHTML = "";
+
+        // Ordina: pending sopra, poi retrieved (ma retrieved non ci sono più nel nodo visibile)
+        filtered.forEach(b => {
+            const div = document.createElement("div");
+            div.className = "booking-item pending";  // sempre pending perché sono nel nodo visibile
+            div.innerHTML = `
+                <div>
+                    <strong>Ticket #${b.id} (${b.items} capi)</strong><br>
+                    ${b.name}<br>
+                    <small>Ingresso: ${b.timeIn}</small>
+                </div>
+                <div>
+                    <button class="action-button" onclick="markRetrieved('${b.key}', ${b.id})">Ritirato</button>
+                </div>
+            `;
+            container.appendChild(div);
         });
 
-        async function markAsDelivered(bookingId) {
-            if (!confirm(`Confermi consegna del Ticket N° ${bookingId}?`)) return;
-
-            try {
-                // Rimuove dalla lista visibile (sparisce per tutti in tempo reale)
-                await bookingsRef.child(bookingId).remove();
-                alert(`Ticket ${bookingId} marcato come consegnato!`);
-            } catch (e) {
-                alert("Errore: " + e.message);
-            }
+        if (filtered.length === 0) {
+            container.innerHTML = "<p style='text-align:center; color:#888; font-size:18px;'>Nessuna prenotazione in attesa</p>";
         }
-    </script>
+    }
+
+    function updateStats() {
+        renderBookingList();  // richiama per aggiornare i numeri
+    }
+
+    async function markRetrieved(key, ticketId) {
+        if (!confirm(`Confermi il ritiro del Ticket #${ticketId}?`)) return;
+        try {
+            await visibleRef.child(key).remove();
+            // Sparisce automaticamente dalla lista
+        } catch (e) {
+            alert("Errore: " + e.message);
+        }
+    }
+
+    async function resetDayCounter() {
+        if (!confirm("Sei sicuro di voler cancellare TUTTE le prenotazioni del giorno?")) return;
+        if (!confirm("Attenzione: questa azione è irreversibile!")) return;
+        try {
+            await visibleRef.remove();
+            await counterRef.set(0);
+            alert("Tutto resettato!");
+        } catch (e) {
+            alert("Errore reset: " + e.message);
+        }
+    }
+</script>
 </body>
 </html>
