@@ -56,20 +56,20 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // LEGGE DAL NODO VISIBILE (sicuro)
+    // Nodo visibile per admin (solo lettura + update per status)
     const visibleRef = db.ref('prenotazioni_visibili');
     const counterRef = db.ref('counter');
 
     let allBookings = [];
     let currentCounter = 0;
 
-    // Carica il counter per calcolare i ritirati
+    // Carica counter per totali
     counterRef.on('value', (snap) => {
         currentCounter = snap.val() || 0;
         updateStats();
     });
 
-    // Listener realtime sui ticket visibili
+    // Listener realtime
     visibleRef.on('value', (snapshot) => {
         allBookings = [];
         snapshot.forEach((child) => {
@@ -85,9 +85,8 @@
             b.name.toLowerCase().includes(search) || b.id.toString().includes(search)
         );
 
-        // Pending = ancora presenti, Retrieved = totali creati meno pending
-        const pending = filtered.length;
-        const retrieved = currentCounter - pending;
+        const pending = filtered.filter(b => b.status === "pending").length;
+        const retrieved = filtered.filter(b => b.status === "retrieved").length;
 
         document.getElementById("totalBookings").innerText = currentCounter;
         document.getElementById("pendingBookings").innerText = pending;
@@ -96,10 +95,12 @@
         const container = document.getElementById("activeBookingsList");
         container.innerHTML = "";
 
-        // Ordina: pending sopra, poi retrieved (ma retrieved non ci sono più nel nodo visibile)
+        // Ordina: pending sopra, retrieved sotto
+        filtered.sort((a, b) => (a.status === "pending" ? -1 : 1));
+
         filtered.forEach(b => {
             const div = document.createElement("div");
-            div.className = "booking-item pending";  // sempre pending perché sono nel nodo visibile
+            div.className = `booking-item ${b.status === "retrieved" ? "retrieved" : ""}`;
             div.innerHTML = `
                 <div>
                     <strong>Ticket #${b.id} (${b.items} capi)</strong><br>
@@ -107,26 +108,33 @@
                     <small>Ingresso: ${b.timeIn}</small>
                 </div>
                 <div>
-                    <button class="action-button" onclick="markRetrieved('${b.key}', ${b.id})">Ritirato</button>
+                    ${b.status === "pending"
+                        ? `<button class="action-button" onclick="markRetrieved('${b.key}', ${b.id})">Ritirato</button>`
+                        : `<span class="retrieved-info">Ritirato alle ${b.timeOut}</span>`
+                    }
                 </div>
             `;
             container.appendChild(div);
         });
 
         if (filtered.length === 0) {
-            container.innerHTML = "<p style='text-align:center; color:#888; font-size:18px;'>Nessuna prenotazione in attesa</p>";
+            container.innerHTML = "<p style='text-align:center; color:#888; font-size:18px;'>Nessuna prenotazione al momento</p>";
         }
     }
 
     function updateStats() {
-        renderBookingList();  // richiama per aggiornare i numeri
+        renderBookingList();
     }
 
     async function markRetrieved(key, ticketId) {
         if (!confirm(`Confermi il ritiro del Ticket #${ticketId}?`)) return;
+
+        const now = new Date();
+        const timeOut = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}:${now.getSeconds().toString().padStart(2,'0')}`;
+
         try {
-            await visibleRef.child(key).remove();
-            // Sparisce automaticamente dalla lista
+            await visibleRef.child(key).update({ status: "retrieved", timeOut: timeOut });
+            // Rimane nella lista con orario ritiro
         } catch (e) {
             alert("Errore: " + e.message);
         }
