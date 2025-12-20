@@ -55,12 +55,11 @@
         }
         button:hover { background: #1da851; }
 
-        /* Privacy pulita e compatta */
         .privacy-container {
             background: #f8fff8;
             padding: 16px;
             border-radius: 10px;
-            margin: 20px 0 5px 0; /* ← spazio ridotto sotto */
+            margin: 20px 0 5px 0;
             border: 1px solid #d0ebd0;
             font-size: 14.5px;
             line-height: 1.5;
@@ -117,7 +116,6 @@
             <option value="5">5 Capi</option>
         </select>
 
-        <!-- PRIVACY COMPATTA E PERFETTA -->
         <div class="privacy-container">
             <label>
                 <input type="checkbox" id="privacyConsent" required>
@@ -144,7 +142,7 @@
     </div>
 
     <script>
-        // Firebase
+        // Firebase config
         const firebaseConfig = {
             apiKey: "AIzaSyCU2P3eOGkNvU1TgMnKK3LuD-BwiFEpUGA",
             authDomain: "guardaroba-funziona-1.firebaseapp.com",
@@ -157,9 +155,10 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
         const bookingsRef = db.ref('prenotazioni');
+        const visibleRef = db.ref('prenotazioni_visibili');  // Nuovo nodo per admin
         const counterRef = db.ref('counter');
 
-        // WhatsApp Business API - INSERISCI I TUOI DATI
+        // WhatsApp Business API - INSERISCI I TUOI
         const WHATSAPP_TOKEN = "IL_TUO_TOKEN_PERMANENTE";
         const PHONE_NUMBER_ID = "IL_TUO_PHONE_NUMBER_ID";
         const TEMPLATE_NAME = "ticket_guardaroba";
@@ -220,8 +219,19 @@
                 consentTimestamp: firebase.database.ServerValue.TIMESTAMP
             };
 
+            // Duplicazione per admin (senza telefono)
+            const visibile = {
+                id: ticket,
+                name: name,
+                items: items,
+                timeIn: timeIn,
+                status: "pending"
+            };
+
             try {
+                // Salva privato + visibile + counter
                 await bookingsRef.child(ticket).set(booking);
+                await visibleRef.child(ticket).set(visibile);
                 await counterRef.set(ticket);
 
                 document.getElementById("currentTicketNum").innerText = ticket;
@@ -239,7 +249,7 @@
                 const msg = `Ciao ${encodeURIComponent(name)}!%0aTicket n° *${ticket}*%0aCapi: ${items}%0aOra deposito: ${timeIn}%0aGrazie e buona serata!`;
                 document.getElementById("waLink").href = `https://wa.me/${phone}?text=${msg}`;
 
-                // Reset
+                // Reset form
                 document.getElementById("clientName").value = "";
                 document.getElementById("customerPhone").value = "";
                 document.getElementById("itemCount").value = "1";
