@@ -116,6 +116,7 @@
             <option value="5">5 Capi</option>
         </select>
 
+        <!-- PRIVACY CON LINK CORRETTO AL PIETRE NERE RESORT -->
         <div class="privacy-container">
             <label>
                 <input type="checkbox" id="privacyConsent" required>
@@ -124,7 +125,7 @@
                     per ricevere il ticket WhatsApp e gestire il deposito.
                     <br><br>
                     <small>Dati conservati solo fino al ritiro e cancellati dopo 30 giorni. 
-                    <a href="https://tuosito.it/privacy" target="_blank" class="privacy-link">Informativa completa</a></small>
+                    <a href="https://www.pietrenereresort.it/privacy/" target="_blank" class="privacy-link">Informativa completa</a></small>
                 </span>
             </label>
         </div>
@@ -155,7 +156,7 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
         const bookingsRef = db.ref('prenotazioni');
-        const visibleRef = db.ref('prenotazioni_visibili');  // Nuovo nodo per admin
+        const visibleRef = db.ref('prenotazioni_visibili');  // Per sincronizzazione admin
         const counterRef = db.ref('counter');
 
         // WhatsApp Business API - INSERISCI I TUOI
@@ -181,7 +182,7 @@
                             { type: "text", text: name },
                             { type: "text", text: ticket.toString() },
                             { type: "text", text: items },
-                            { type: "text", text: time }
+                            { type: "text", time }
                         ]
                     }]
                 }
@@ -229,7 +230,6 @@
             };
 
             try {
-                // Salva privato + visibile + counter
                 await bookingsRef.child(ticket).set(booking);
                 await visibleRef.child(ticket).set(visibile);
                 await counterRef.set(ticket);
