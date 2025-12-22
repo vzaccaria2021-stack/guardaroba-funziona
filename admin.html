@@ -50,26 +50,26 @@
         projectId: "guardaroba-funziona-1",
         storageBucket: "guardaroba-funziona-1.appspot.com",
         messagingSenderId: "432865003672",
-        appId: "1:432865003672:web:526af8c453ae6be544a8ed",
-        measurementId: "G-HV1YPDQ0WY"
+        appId: "1:432865003672:web:526af8c453ae6be544a8ed"
     };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // Nodo visibile per admin (solo lettura + update per status)
     const visibleRef = db.ref('prenotazioni_visibili');
     const counterRef = db.ref('counter');
+
+    // === CONFIGURAZIONE WHATSAPP BUSINESS API (stessi dati di index.html) ===
+    const WHATSAPP_TOKEN = "IL_TUO_TOKEN_PERMANENTE"; // ← Inserisci il tuo token
+    const PHONE_NUMBER_ID = "IL_TUO_PHONE_NUMBER_ID"; // ← Inserisci il tuo Phone Number ID
 
     let allBookings = [];
     let currentCounter = 0;
 
-    // Carica counter per totali
     counterRef.on('value', (snap) => {
         currentCounter = snap.val() || 0;
         updateStats();
     });
 
-    // Listener realtime
     visibleRef.on('value', (snapshot) => {
         allBookings = [];
         snapshot.forEach((child) => {
@@ -95,7 +95,6 @@
         const container = document.getElementById("activeBookingsList");
         container.innerHTML = "";
 
-        // Ordina: pending sopra, retrieved sotto
         filtered.sort((a, b) => (a.status === "pending" ? -1 : 1));
 
         filtered.forEach(b => {
@@ -109,7 +108,7 @@
                 </div>
                 <div>
                     ${b.status === "pending"
-                        ? `<button class="action-button" onclick="markRetrieved('${b.key}', ${b.id})">Ritirato</button>`
+                        ? `<button class="action-button" onclick="markRetrieved('${b.key}', '${b.phone}', ${b.id}, '${b.name}')">Ritirato</button>`
                         : `<span class="retrieved-info">Ritirato alle ${b.timeOut}</span>`
                     }
                 </div>
@@ -122,11 +121,33 @@
         }
     }
 
-    function updateStats() {
-        renderBookingList();
+    async function sendWithdrawalMessage(toPhone, clientName, ticketId) {
+        const url = `https://graph.facebook.com/v20.0/${PHONE_NUMBER_ID}/messages`;
+        const messageText = `Ciao ${clientName}!\nI tuoi capi sono stati ritirati con successo.\nTicket n° *${ticketId}*\nGrazie e buona serata! 🌙\nPietre Nere Resort & Spa`;
+
+        const payload = {
+            messaging_product: "whatsapp",
+            to: toPhone,
+            type: "text",
+            text: { body: messageText }
+        };
+
+        try {
+            const res = await fetch(url, {
+                method: "POST",
+                headers: {
+                    "Authorization": `Bearer ${WHATSAPP_TOKEN}`,
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(payload)
+            });
+            if (!res.ok) console.error("Errore invio WhatsApp:", await res.json());
+        } catch (err) {
+            console.error("Errore invio:", err);
+        }
     }
 
-    async function markRetrieved(key, ticketId) {
+    async function markRetrieved(key, phone, ticketId, name) {
         if (!confirm(`Confermi il ritiro del Ticket #${ticketId}?`)) return;
 
         const now = new Date();
@@ -134,7 +155,12 @@
 
         try {
             await visibleRef.child(key).update({ status: "retrieved", timeOut: timeOut });
-            // Rimane nella lista con orario ritiro
+
+            // Invia messaggio di conferma ritiro al cliente
+            if (phone) {
+                await sendWithdrawalMessage(phone, name, ticketId);
+            }
+
         } catch (e) {
             alert("Errore: " + e.message);
         }
