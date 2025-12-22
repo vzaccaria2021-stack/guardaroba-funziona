@@ -116,7 +116,6 @@
             <option value="5">5 Capi</option>
         </select>
 
-        <!-- PRIVACY CON LINK CORRETTO AL PIETRE NERE RESORT -->
         <div class="privacy-container">
             <label>
                 <input type="checkbox" id="privacyConsent" required>
@@ -143,7 +142,6 @@
     </div>
 
     <script>
-        // Firebase config
         const firebaseConfig = {
             apiKey: "AIzaSyCU2P3eOGkNvU1TgMnKK3LuD-BwiFEpUGA",
             authDomain: "guardaroba-funziona-1.firebaseapp.com",
@@ -156,7 +154,7 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
         const bookingsRef = db.ref('prenotazioni');
-        const visibleRef = db.ref('prenotazioni_visibili');  // Per sincronizzazione admin
+        const visibleRef = db.ref('prenotazioni_visibili');  // Nodo per admin
         const counterRef = db.ref('counter');
 
         // WhatsApp Business API - INSERISCI I TUOI
@@ -182,7 +180,7 @@
                             { type: "text", text: name },
                             { type: "text", text: ticket.toString() },
                             { type: "text", text: items },
-                            { type: "text", time }
+                            { type: "text", text: time }
                         ]
                     }]
                 }
@@ -214,18 +212,23 @@
             const timeIn = new Date().toLocaleTimeString('it-IT', {hour:'2-digit', minute:'2-digit'});
 
             const booking = {
-                id: ticket, name, phone, items, timeIn,
+                id: ticket, 
+                name, 
+                phone, 
+                items, 
+                timeIn,
                 status: "pending",
                 privacyConsent: true,
                 consentTimestamp: firebase.database.ServerValue.TIMESTAMP
             };
 
-            // Duplicazione per admin (senza telefono)
+            // Duplicazione per admin: INCLUDE IL TELEFONO per invio messaggio ritiro
             const visibile = {
                 id: ticket,
                 name: name,
                 items: items,
                 timeIn: timeIn,
+                phone: phone,  // ← CRUCIALE: serve all'admin per inviare messaggio ritiro
                 status: "pending"
             };
 
@@ -245,7 +248,6 @@
                     : `Errore invio automatico<br><small>Usa il link sotto</small>`;
                 document.getElementById("status").style.color = wa.success ? "#25D366" : "#D32525";
 
-                // Fallback wa.me
                 const msg = `Ciao ${encodeURIComponent(name)}!%0aTicket n° *${ticket}*%0aCapi: ${items}%0aOra deposito: ${timeIn}%0aGrazie e buona serata!`;
                 document.getElementById("waLink").href = `https://wa.me/${phone}?text=${msg}`;
 
