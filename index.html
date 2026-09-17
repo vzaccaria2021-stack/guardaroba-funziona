@@ -148,12 +148,6 @@
             <option value="5">5 Capi</option>
         </select>
 
-        <label for="rackNumber">Appendiabiti</label>
-        <input type="number" id="rackNumber" placeholder="1" min="1">
-
-        <label for="hangerNumber">Numero Gruccia</label>
-        <input type="number" id="hangerNumber" placeholder="12" min="1">
-
         <div class="privacy-container">
             <label>
                 <input type="checkbox" id="privacyConsent" required>
@@ -208,6 +202,38 @@
         const bookingsRef = db.ref('prenotazioni');
         const visibleRef = db.ref('prenotazioni_visibili');  // Nodo per admin
         const counterRef = db.ref('counter');
+        const occupiedRef = db.ref('occupiedSlots');
+        const configRef = db.ref('config');
+
+        // Assegna atomicamente il primo appendiabiti/gruccia libero (configurabile
+        // dalla pagina admin), così il posto non lo sceglie l'operatore.
+        async function assignSlot(numRacks, hangersPerRack) {
+            let chosenRack = null, chosenHanger = null;
+            const result = await occupiedRef.transaction(current => {
+                current = current || {};
+                chosenRack = null;
+                chosenHanger = null;
+                slotSearch:
+                for (let r = 1; r <= numRacks; r++) {
+                    for (let h = 1; h <= hangersPerRack; h++) {
+                        const key = `r${r}h${h}`;
+                        if (!current[key]) {
+                            chosenRack = r;
+                            chosenHanger = h;
+                            current[key] = true;
+                            break slotSearch;
+                        }
+                    }
+                }
+                if (chosenRack === null) return; // nessun posto libero: annulla la transazione
+                return current;
+            });
+
+            if (!result.committed || chosenRack === null) {
+                throw new Error("Nessun posto libero nel guardaroba");
+            }
+            return { rack: chosenRack, hanger: chosenHanger };
+        }
 
         // WhatsApp Business API - INSERISCI I TUOI
         const WHATSAPP_TOKEN = "IL_TUO_TOKEN_PERMANENTE";
@@ -250,16 +276,26 @@
             const name = document.getElementById("clientName").value.trim();
             const phone = document.getElementById("customerPhone").value.trim();
             const items = document.getElementById("itemCount").value;
-            const rack = document.getElementById("rackNumber").value.trim();
-            const hanger = document.getElementById("hangerNumber").value.trim();
             const consent = document.getElementById("privacyConsent").checked;
 
-            if (!name || phone.length < 10 || !rack || !hanger || !consent) {
-                alert("Compila tutti i campi (incluso appendiabiti e gruccia) e accetta la privacy");
+            if (!name || phone.length < 10 || !consent) {
+                alert("Compila tutti i campi e accetta la privacy");
                 return;
             }
 
             const timeIn = new Date().toLocaleTimeString('it-IT', {hour:'2-digit', minute:'2-digit'});
+
+            let rack, hanger;
+            try {
+                const configSnap = await configRef.once('value');
+                const config = configSnap.val() || { numRacks: 5, hangersPerRack: 20 };
+                const assigned = await assignSlot(config.numRacks, config.hangersPerRack);
+                rack = assigned.rack;
+                hanger = assigned.hanger;
+            } catch (e) {
+                alert("Errore: " + e.message);
+                return;
+            }
 
             let ticket;
             try {
@@ -323,8 +359,6 @@
                 document.getElementById("clientName").value = "";
                 document.getElementById("customerPhone").value = "";
                 document.getElementById("itemCount").value = "1";
-                document.getElementById("rackNumber").value = "";
-                document.getElementById("hangerNumber").value = "";
                 document.getElementById("privacyConsent").checked = false;
 
             } catch (e) {

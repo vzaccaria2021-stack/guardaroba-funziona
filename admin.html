@@ -29,6 +29,24 @@
         #scanModal .scan-panel { background: #fff; padding: 20px; border-radius: 10px; text-align: center; }
         #scanVideo { width: 300px; height: 225px; background: #000; }
         #scanModal button { margin-top: 12px; padding: 8px 20px; border: none; border-radius: 6px; background: #d32f2f; color: #fff; cursor: pointer; }
+
+        .settings-box { background: #f0f4ff; border: 1px solid #c3d0f5; border-radius: 8px; padding: 15px; margin-bottom: 20px; }
+        .settings-box h3 { margin: 0 0 10px; font-size: 1em; color: #333; }
+        .settings-row { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
+        .settings-row div { display: flex; flex-direction: column; }
+        .settings-row label { font-size: 0.85em; color: #555; margin-bottom: 4px; }
+        .settings-row input { width: 90px; padding: 8px; border-radius: 6px; border: 1px solid #bbb; }
+        .settings-row button { padding: 9px 16px; border: none; border-radius: 6px; background: #1976d2; color: #fff; cursor: pointer; }
+        .settings-row button:hover { background: #1565c0; }
+
+        #slotPopup {
+            display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75);
+            z-index: 1100; align-items: center; justify-content: center;
+        }
+        #slotPopup .slot-panel { background: #fff; padding: 30px 40px; border-radius: 12px; text-align: center; max-width: 320px; }
+        #slotPopup .slot-ticket { font-size: 2.2em; font-weight: bold; color: #D32525; }
+        #slotPopup .slot-location { font-size: 1.3em; margin-top: 15px; line-height: 1.6; }
+        #slotPopup button { margin-top: 20px; padding: 10px 30px; border: none; border-radius: 6px; background: #388e3c; color: #fff; font-size: 1em; cursor: pointer; }
     </style>
     <!-- Firebase -->
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -40,6 +58,20 @@
 <div class="container">
     <div class="dashboard">
         <h1>Dashboard Guardaroba</h1>
+        <div class="settings-box">
+            <h3>Configurazione Guardaroba</h3>
+            <div class="settings-row">
+                <div>
+                    <label for="numRacksInput">Numero Appendiabiti</label>
+                    <input type="number" id="numRacksInput" min="1">
+                </div>
+                <div>
+                    <label for="hangersPerRackInput">Grucce per Appendiabiti</label>
+                    <input type="number" id="hangersPerRackInput" min="1">
+                </div>
+                <button onclick="saveConfig()">Salva</button>
+            </div>
+        </div>
         <div class="header-stats">
             <div class="stat">Totali: <span id="totalBookings">0</span></div>
             <div class="stat">Da ritirare: <span id="pendingBookings">0</span></div>
@@ -63,6 +95,18 @@
     </div>
 </div>
 
+<div id="slotPopup">
+    <div class="slot-panel">
+        <div>Ticket</div>
+        <div class="slot-ticket" id="slotPopupTicket"></div>
+        <div class="slot-location">
+            Appendiabiti <strong id="slotPopupRack"></strong><br>
+            Gruccia <strong id="slotPopupHanger"></strong>
+        </div>
+        <button onclick="closeSlotPopup()">OK</button>
+    </div>
+</div>
+
 <script>
     const firebaseConfig = {
         apiKey: "AIzaSyCU2P3eOGkNvU1TgMnKK3LuD-BwiFEpUGA",
@@ -78,14 +122,37 @@
 
     const visibleRef = db.ref('prenotazioni_visibili');
     const counterRef = db.ref('counter');
+    const occupiedRef = db.ref('occupiedSlots');
+    const configRef = db.ref('config');
 
     let allBookings = [];
     let currentCounter = 0;
 
     counterRef.on('value', (snap) => {
         currentCounter = snap.val() || 0;
-        updateStats();
+        renderBookingList();
     });
+
+    configRef.on('value', (snap) => {
+        const config = snap.val() || { numRacks: 5, hangersPerRack: 20 };
+        document.getElementById("numRacksInput").value = config.numRacks;
+        document.getElementById("hangersPerRackInput").value = config.hangersPerRack;
+    });
+
+    async function saveConfig() {
+        const numRacks = parseInt(document.getElementById("numRacksInput").value, 10);
+        const hangersPerRack = parseInt(document.getElementById("hangersPerRackInput").value, 10);
+        if (!numRacks || !hangersPerRack) {
+            alert("Inserisci valori validi per appendiabiti e grucce");
+            return;
+        }
+        try {
+            await configRef.set({ numRacks, hangersPerRack });
+            alert("Configurazione salvata");
+        } catch (e) {
+            alert("Errore: " + e.message);
+        }
+    }
 
     visibleRef.on('value', (snapshot) => {
         allBookings = [];
@@ -95,6 +162,30 @@
         });
         renderBookingList();
     });
+
+    // Popup automatico: avvisa dove appendere il capo appena arriva una nuova
+    // prenotazione. Aspetta il caricamento iniziale per non mostrare un popup
+    // per ogni prenotazione già esistente al primo avvio della pagina.
+    visibleRef.once('value').then(() => {
+        visibleRef.on('child_added', (snap) => {
+            const b = snap.val();
+            if (b && b.status === "pending") {
+                showSlotPopup(b.id, b.rack, b.hanger);
+            }
+        });
+    });
+
+    function showSlotPopup(ticketId, rack, hanger) {
+        document.getElementById("slotPopupTicket").innerText = "#" + ticketId;
+        document.getElementById("slotPopupRack").innerText = rack ?? "?";
+        document.getElementById("slotPopupHanger").innerText = hanger ?? "?";
+        document.getElementById("slotPopup").style.display = "flex";
+    }
+
+    function closeSlotPopup() {
+        document.getElementById("slotPopup").style.display = "none";
+        document.getElementById("searchInput").focus();
+    }
 
     function renderBookingList() {
         const search = document.getElementById("searchInput").value.toLowerCase();
@@ -126,7 +217,7 @@
                 </div>
                 <div>
                     ${b.status === "pending"
-                        ? `<button class="action-button" onclick="markRetrieved('${b.key}', ${b.id})">Ritirato</button>`
+                        ? `<button class="action-button" onclick="markRetrieved('${b.key}', ${b.id}, ${b.rack}, ${b.hanger})">Ritirato</button>`
                         : `<span class="retrieved-info">Ritirato alle ${b.timeOut}</span>`
                     }
                 </div>
@@ -139,7 +230,7 @@
         }
     }
 
-    async function markRetrieved(key, ticketId) {
+    async function markRetrieved(key, ticketId, rack, hanger) {
         if (!confirm(`Confermi il ritiro del Ticket #${ticketId}?`)) return;
 
         const now = new Date();
@@ -147,6 +238,7 @@
 
         try {
             await visibleRef.child(key).update({ status: "retrieved", timeOut: timeOut });
+            await occupiedRef.child(`r${rack}h${hanger}`).remove();
             document.getElementById("searchInput").value = "";
             renderBookingList();
         } catch (e) {
@@ -193,6 +285,7 @@
         try {
             await visibleRef.remove();
             await counterRef.set(0);
+            await occupiedRef.remove();
             alert("Tutto resettato!");
         } catch (e) {
             alert("Errore reset: " + e.message);
