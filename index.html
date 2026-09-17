@@ -91,9 +91,6 @@
             font-weight: bold; 
             color: #D32525; 
         }
-        #printLabelsBtn { display: none; background: #333; }
-        #printLabelsBtn:hover { background: #555; }
-
         /* Etichette adesive: pensate per stampante termica con rotolo 50x30mm.
            Per un formato diverso di etichetta cambia le dimensioni qui sotto
            (in .label) e nel corrispondente @page. */
@@ -165,7 +162,6 @@
         <div id="result-display" style="display:none;" class="info-section">
             <div>Ticket N°</div>
             <div id="currentTicketNum"></div>
-            <button id="printLabelsBtn" onclick="window.print()">Stampa Etichette</button>
         </div>
     </div>
 
@@ -300,7 +296,7 @@
                 JsBarcode(".barcode-garment", ticket.toString(), { format: "CODE128", displayValue: false, height: 40 });
                 JsBarcode(".barcode-customer", ticket.toString(), { format: "CODE128", displayValue: false, height: 40 });
                 document.getElementById("customerLabelInfo").innerText = `${name} - ${items} capi - ${timeIn}`;
-                document.getElementById("printLabelsBtn").style.display = "block";
+                window.print();
 
                 // Reset form
                 document.getElementById("clientName").value = "";
