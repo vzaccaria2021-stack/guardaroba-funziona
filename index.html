@@ -91,11 +91,43 @@
             color: #D32525; 
         }
         #status { margin: 15px 0; font-weight: bold; }
+
+        #printLabelsBtn { display: none; background: #333; }
+        #printLabelsBtn:hover { background: #555; }
+
+        /* Etichette adesive: pensate per stampante termica con rotolo 50x30mm.
+           Per un formato diverso di etichetta cambia le dimensioni qui sotto
+           (in .label) e nel corrispondente @page. */
+        #printArea { display: none; }
+        @media print {
+            body * { visibility: hidden; }
+            #printArea, #printArea * { visibility: visible; }
+            #printArea { display: block; position: absolute; top: 0; left: 0; }
+        }
+        @page { size: 50mm 30mm; margin: 0; }
+        .label {
+            width: 50mm;
+            height: 30mm;
+            box-sizing: border-box;
+            padding: 2mm;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            page-break-after: always;
+            text-align: center;
+            font-family: Arial, sans-serif;
+        }
+        .label:last-child { page-break-after: auto; }
+        .label-ticket { font-size: 16pt; font-weight: bold; }
+        .label-sub { font-size: 8pt; margin-top: 1mm; }
     </style>
 
     <!-- Firebase -->
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+    <!-- Barcode -->
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
 </head>
 <body>
     <div id="booking-form">
@@ -115,6 +147,12 @@
             <option value="4">4 Capi</option>
             <option value="5">5 Capi</option>
         </select>
+
+        <label for="rackNumber">Appendiabiti</label>
+        <input type="number" id="rackNumber" placeholder="1" min="1">
+
+        <label for="hangerNumber">Numero Gruccia</label>
+        <input type="number" id="hangerNumber" placeholder="12" min="1">
 
         <div class="privacy-container">
             <label>
@@ -138,6 +176,20 @@
             <a id="waLink" href="#" target="_blank" style="color:#25D366; font-weight:bold;">
                 Apri WhatsApp (fallback manuale)
             </a>
+            <button id="printLabelsBtn" onclick="window.print()">Stampa Etichette</button>
+        </div>
+    </div>
+
+    <div id="printArea">
+        <div class="label">
+            <div class="label-ticket">#<span class="ticket-num"></span></div>
+            <svg class="barcode-garment"></svg>
+            <div class="label-sub">Capo depositato</div>
+        </div>
+        <div class="label">
+            <div class="label-ticket">#<span class="ticket-num"></span></div>
+            <svg class="barcode-customer"></svg>
+            <div class="label-sub" id="customerLabelInfo"></div>
         </div>
     </div>
 
@@ -198,10 +250,12 @@
             const name = document.getElementById("clientName").value.trim();
             const phone = document.getElementById("customerPhone").value.trim();
             const items = document.getElementById("itemCount").value;
+            const rack = document.getElementById("rackNumber").value.trim();
+            const hanger = document.getElementById("hangerNumber").value.trim();
             const consent = document.getElementById("privacyConsent").checked;
 
-            if (!name || phone.length < 10 || !consent) {
-                alert("Compila tutti i campi e accetta la privacy");
+            if (!name || phone.length < 10 || !rack || !hanger || !consent) {
+                alert("Compila tutti i campi (incluso appendiabiti e gruccia) e accetta la privacy");
                 return;
             }
 
@@ -217,10 +271,12 @@
             }
 
             const booking = {
-                id: ticket, 
-                name, 
-                phone, 
-                items, 
+                id: ticket,
+                name,
+                phone,
+                items,
+                rack,
+                hanger,
                 timeIn,
                 status: "pending",
                 privacyConsent: true,
@@ -232,6 +288,8 @@
                 id: ticket,
                 name: name,
                 items: items,
+                rack: rack,
+                hanger: hanger,
                 timeIn: timeIn,
                 phone: phone,  // ← CRUCIALE: serve all'admin per inviare messaggio ritiro
                 status: "pending"
@@ -244,6 +302,12 @@
                 document.getElementById("currentTicketNum").innerText = ticket;
                 document.getElementById("result-display").style.display = "block";
                 document.getElementById("status").innerHTML = "Invio in corso…";
+
+                document.querySelectorAll("#printArea .ticket-num").forEach(el => el.innerText = ticket);
+                JsBarcode(".barcode-garment", ticket.toString(), { format: "CODE128", displayValue: false, height: 40 });
+                JsBarcode(".barcode-customer", ticket.toString(), { format: "CODE128", displayValue: false, height: 40 });
+                document.getElementById("customerLabelInfo").innerText = `${name} - ${items} capi - ${timeIn}`;
+                document.getElementById("printLabelsBtn").style.display = "block";
 
                 const wa = await sendWhatsAppTemplate(phone, name, ticket, items, timeIn);
 
@@ -259,6 +323,8 @@
                 document.getElementById("clientName").value = "";
                 document.getElementById("customerPhone").value = "";
                 document.getElementById("itemCount").value = "1";
+                document.getElementById("rackNumber").value = "";
+                document.getElementById("hangerNumber").value = "";
                 document.getElementById("privacyConsent").checked = false;
 
             } catch (e) {
