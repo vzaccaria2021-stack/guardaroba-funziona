@@ -31,9 +31,10 @@
             font-weight: 600; 
             color: #444; 
         }
-        input[type="text"], 
-        input[type="number"], 
-        select { 
+        input[type="text"],
+        input[type="number"],
+        input[type="tel"],
+        select {
             width: 100%; 
             padding: 13px; 
             border: 1.5px solid #ccc; 
@@ -90,8 +91,6 @@
             font-weight: bold; 
             color: #D32525; 
         }
-        #status { margin: 15px 0; font-weight: bold; }
-
         #printLabelsBtn { display: none; background: #333; }
         #printLabelsBtn:hover { background: #555; }
 
@@ -153,7 +152,7 @@
                 <input type="checkbox" id="privacyConsent" required>
                 <span>
                     <strong>Acconsento</strong> al trattamento di nome e telefono<br>
-                    per ricevere il ticket WhatsApp e gestire il deposito.
+                    per gestire il deposito.
                     <br><br>
                     <small>Dati conservati solo fino al ritiro e cancellati dopo 30 giorni. 
                     <a href="https://www.pietrenereresort.it/privacy/" target="_blank" class="privacy-link">Informativa completa</a></small>
@@ -161,15 +160,11 @@
             </label>
         </div>
 
-        <button onclick="createBooking()">Genera Ticket + Invia WhatsApp</button>
+        <button onclick="createBooking()">Genera Ticket</button>
 
         <div id="result-display" style="display:none;" class="info-section">
             <div>Ticket N°</div>
             <div id="currentTicketNum"></div>
-            <p id="status"></p>
-            <a id="waLink" href="#" target="_blank" style="color:#25D366; font-weight:bold;">
-                Apri WhatsApp (fallback manuale)
-            </a>
             <button id="printLabelsBtn" onclick="window.print()">Stampa Etichette</button>
         </div>
     </div>
@@ -233,43 +228,6 @@
                 throw new Error("Nessun posto libero nel guardaroba");
             }
             return { rack: chosenRack, hanger: chosenHanger };
-        }
-
-        // WhatsApp Business API - INSERISCI I TUOI
-        const WHATSAPP_TOKEN = "IL_TUO_TOKEN_PERMANENTE";
-        const PHONE_NUMBER_ID = "IL_TUO_PHONE_NUMBER_ID";
-        const TEMPLATE_NAME = "ticket_guardaroba";
-
-        async function sendWhatsAppTemplate(to, name, ticket, items, time) {
-            const url = `https://graph.facebook.com/v20.0/${PHONE_NUMBER_ID}/messages`;
-            const payload = {
-                messaging_product: "whatsapp",
-                to: to,
-                type: "template",
-                template: {
-                    name: TEMPLATE_NAME,
-                    language: { code: "it" },
-                    components: [{
-                        type: "body",
-                        parameters: [
-                            { type: "text", text: name },
-                            { type: "text", text: ticket.toString() },
-                            { type: "text", text: items },
-                            { type: "text", text: time }
-                        ]
-                    }]
-                }
-            };
-
-            const res = await fetch(url, {
-                method: "POST",
-                headers: { 
-                    "Authorization": `Bearer ${WHATSAPP_TOKEN}`, 
-                    "Content-Type": "application/json" 
-                },
-                body: JSON.stringify(payload)
-            });
-            return res.ok ? {success:true} : {success:false, error: (await res.json()).error?.message || "Errore"};
         }
 
         async function createBooking() {
@@ -337,23 +295,12 @@
 
                 document.getElementById("currentTicketNum").innerText = ticket;
                 document.getElementById("result-display").style.display = "block";
-                document.getElementById("status").innerHTML = "Invio in corso…";
 
                 document.querySelectorAll("#printArea .ticket-num").forEach(el => el.innerText = ticket);
                 JsBarcode(".barcode-garment", ticket.toString(), { format: "CODE128", displayValue: false, height: 40 });
                 JsBarcode(".barcode-customer", ticket.toString(), { format: "CODE128", displayValue: false, height: 40 });
                 document.getElementById("customerLabelInfo").innerText = `${name} - ${items} capi - ${timeIn}`;
                 document.getElementById("printLabelsBtn").style.display = "block";
-
-                const wa = await sendWhatsAppTemplate(phone, name, ticket, items, timeIn);
-
-                document.getElementById("status").innerHTML = wa.success 
-                    ? "Ticket generato e inviato automaticamente!"
-                    : `Errore invio automatico<br><small>Usa il link sotto</small>`;
-                document.getElementById("status").style.color = wa.success ? "#25D366" : "#D32525";
-
-                const msg = `Ciao ${encodeURIComponent(name)}!%0aTicket n° *${ticket}*%0aCapi: ${items}%0aOra deposito: ${timeIn}%0aGrazie e buona serata!`;
-                document.getElementById("waLink").href = `https://wa.me/${phone}?text=${msg}`;
 
                 // Reset form
                 document.getElementById("clientName").value = "";
