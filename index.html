@@ -105,7 +105,7 @@
         <input type="text" id="clientName" placeholder="Mario Rossi">
 
         <label for="customerPhone">Cellulare</label>
-        <input type="number" id="customerPhone" placeholder="393331234567">
+        <input type="tel" inputmode="numeric" id="customerPhone" placeholder="393331234567">
 
         <label for="itemCount">Numero Capi</label>
         <select id="itemCount">
@@ -162,9 +162,6 @@
         const PHONE_NUMBER_ID = "IL_TUO_PHONE_NUMBER_ID";
         const TEMPLATE_NAME = "ticket_guardaroba";
 
-        let nextTicketNumber = 1;
-        counterRef.once('value', s => nextTicketNumber = (s.val() || 0) + 1);
-
         async function sendWhatsAppTemplate(to, name, ticket, items, time) {
             const url = `https://graph.facebook.com/v20.0/${PHONE_NUMBER_ID}/messages`;
             const payload = {
@@ -208,8 +205,16 @@
                 return;
             }
 
-            const ticket = nextTicketNumber++;
             const timeIn = new Date().toLocaleTimeString('it-IT', {hour:'2-digit', minute:'2-digit'});
+
+            let ticket;
+            try {
+                const result = await counterRef.transaction(current => (current || 0) + 1);
+                ticket = result.snapshot.val();
+            } catch (e) {
+                alert("Errore: " + e.message);
+                return;
+            }
 
             const booking = {
                 id: ticket, 
@@ -235,7 +240,6 @@
             try {
                 await bookingsRef.child(ticket).set(booking);
                 await visibleRef.child(ticket).set(visibile);
-                await counterRef.set(ticket);
 
                 document.getElementById("currentTicketNum").innerText = ticket;
                 document.getElementById("result-display").style.display = "block";

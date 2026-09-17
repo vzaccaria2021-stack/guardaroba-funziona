@@ -78,7 +78,7 @@
     function renderBookingList() {
         const search = document.getElementById("searchInput").value.toLowerCase();
         const filtered = allBookings.filter(b =>
-            b.name.toLowerCase().includes(search) || b.id.toString().includes(search)
+            (b.name || '').toLowerCase().includes(search) || (b.id ?? '').toString().includes(search)
         );
 
         const pending = filtered.filter(b => b.status === "pending").length;
