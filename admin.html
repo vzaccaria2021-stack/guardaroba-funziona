@@ -83,6 +83,7 @@
         /* Etichetta gruccia: solo numero ticket + codice a barre, grande e leggibile */
         .label-ticket-big { font-size: 34pt; font-weight: bold; margin-bottom: 8mm; }
         .barcode-garment { width: 75mm; }
+        .barcode-customer { width: 75mm; margin-top: 2mm; }
     </style>
     <!-- Firebase -->
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -237,7 +238,7 @@
         const printedAt = `Data ${now.toLocaleDateString('it-IT')} Ora ${now.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}`;
         document.querySelectorAll("#printArea .printed-at").forEach(el => el.innerText = printedAt);
         JsBarcode(".barcode-garment", ticketId.toString(), { format: "CODE128", displayValue: true, fontSize: 22, width: 3, height: 70, margin: 4 });
-        JsBarcode(".barcode-customer", ticketId.toString(), { format: "CODE128", displayValue: true, fontSize: 16, width: 2, height: 50, margin: 4 });
+        JsBarcode(".barcode-customer", ticketId.toString(), { format: "CODE128", displayValue: true, fontSize: 20, width: 3, height: 65, margin: 4 });
         window.print();
     }
 
