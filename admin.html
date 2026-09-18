@@ -48,7 +48,7 @@
         #slotPopup .slot-location { font-size: 1.3em; margin-top: 15px; line-height: 1.6; }
         #slotPopup button { margin-top: 20px; padding: 10px 30px; border: none; border-radius: 6px; background: #388e3c; color: #fff; font-size: 1em; cursor: pointer; }
 
-        /* Scontrino termico: rotolo largo 80mm, lunghezza fissa 155mm.
+        /* Scontrino termico: rotolo largo 80mm, lunghezza fissa 100mm.
            Per dimensioni diverse cambia i valori qui sotto (in .label) e
            nel corrispondente @page. */
         #printArea { display: none; }
@@ -57,10 +57,10 @@
             #printArea, #printArea * { visibility: visible; }
             #printArea { display: block; position: absolute; top: 0; left: 0; }
         }
-        @page { size: 80mm 155mm; margin: 0; }
+        @page { size: 80mm 100mm; margin: 0; }
         .label {
             width: 80mm;
-            height: 155mm;
+            height: 100mm;
             box-sizing: border-box;
             padding: 6mm 4mm;
             display: flex;
