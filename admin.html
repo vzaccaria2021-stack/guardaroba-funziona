@@ -48,32 +48,30 @@
         #slotPopup .slot-location { font-size: 1.3em; margin-top: 15px; line-height: 1.6; }
         #slotPopup button { margin-top: 20px; padding: 10px 30px; border: none; border-radius: 6px; background: #388e3c; color: #fff; font-size: 1em; cursor: pointer; }
 
-        /* Etichette adesive: pensate per stampante termica con rotolo 50x30mm.
-           Per un formato diverso di etichetta cambia le dimensioni qui sotto
-           (in .label) e nel corrispondente @page. */
+        /* Scontrino termico: rotolo largo 80mm, lunghezza libera (come uno
+           scontrino da cassa). Per una larghezza diversa cambia il valore
+           qui sotto (in .label) e nel corrispondente @page. */
         #printArea { display: none; }
         @media print {
             body * { visibility: hidden; }
             #printArea, #printArea * { visibility: visible; }
             #printArea { display: block; position: absolute; top: 0; left: 0; }
         }
-        @page { size: 50mm 30mm; margin: 0; }
+        @page { size: 80mm auto; margin: 0; }
         .label {
-            width: 50mm;
-            height: 30mm;
+            width: 80mm;
             box-sizing: border-box;
-            padding: 2mm;
+            padding: 6mm 4mm;
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
             page-break-after: always;
             text-align: center;
             font-family: Arial, sans-serif;
         }
         .label:last-child { page-break-after: auto; }
-        .label-ticket { font-size: 16pt; font-weight: bold; }
-        .label-sub { font-size: 8pt; margin-top: 1mm; }
+        .label-ticket { font-size: 26pt; font-weight: bold; margin: 3mm 0; }
+        .label-sub { font-size: 11pt; margin-top: 2mm; }
     </style>
     <!-- Firebase -->
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -220,8 +218,8 @@
 
     function printLabels(ticketId, name, items, timeIn) {
         document.querySelectorAll("#printArea .ticket-num").forEach(el => el.innerText = ticketId);
-        JsBarcode(".barcode-garment", ticketId.toString(), { format: "CODE128", displayValue: false, height: 40 });
-        JsBarcode(".barcode-customer", ticketId.toString(), { format: "CODE128", displayValue: false, height: 40 });
+        JsBarcode(".barcode-garment", ticketId.toString(), { format: "CODE128", displayValue: false, width: 2.5, height: 60 });
+        JsBarcode(".barcode-customer", ticketId.toString(), { format: "CODE128", displayValue: false, width: 2.5, height: 60 });
         document.getElementById("customerLabelInfo").innerText = `${name} - ${items} capi - ${timeIn}`;
         window.print();
     }
