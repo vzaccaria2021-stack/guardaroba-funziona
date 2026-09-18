@@ -47,12 +47,41 @@
         #slotPopup .slot-ticket { font-size: 2.2em; font-weight: bold; color: #D32525; }
         #slotPopup .slot-location { font-size: 1.3em; margin-top: 15px; line-height: 1.6; }
         #slotPopup button { margin-top: 20px; padding: 10px 30px; border: none; border-radius: 6px; background: #388e3c; color: #fff; font-size: 1em; cursor: pointer; }
+
+        /* Etichette adesive: pensate per stampante termica con rotolo 50x30mm.
+           Per un formato diverso di etichetta cambia le dimensioni qui sotto
+           (in .label) e nel corrispondente @page. */
+        #printArea { display: none; }
+        @media print {
+            body * { visibility: hidden; }
+            #printArea, #printArea * { visibility: visible; }
+            #printArea { display: block; position: absolute; top: 0; left: 0; }
+        }
+        @page { size: 50mm 30mm; margin: 0; }
+        .label {
+            width: 50mm;
+            height: 30mm;
+            box-sizing: border-box;
+            padding: 2mm;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            page-break-after: always;
+            text-align: center;
+            font-family: Arial, sans-serif;
+        }
+        .label:last-child { page-break-after: auto; }
+        .label-ticket { font-size: 16pt; font-weight: bold; }
+        .label-sub { font-size: 8pt; margin-top: 1mm; }
     </style>
     <!-- Firebase -->
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
     <!-- Scanner via fotocamera (fallback se non c'è un lettore a codice a barre) -->
     <script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.20.0/umd/index.min.js"></script>
+    <!-- Barcode -->
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
 </head>
 <body>
 <div class="container">
@@ -104,6 +133,19 @@
             Gruccia <strong id="slotPopupHanger"></strong>
         </div>
         <button onclick="closeSlotPopup()">OK</button>
+    </div>
+</div>
+
+<div id="printArea">
+    <div class="label">
+        <div class="label-ticket">#<span class="ticket-num"></span></div>
+        <svg class="barcode-garment"></svg>
+        <div class="label-sub">Capo depositato</div>
+    </div>
+    <div class="label">
+        <div class="label-ticket">#<span class="ticket-num"></span></div>
+        <svg class="barcode-customer"></svg>
+        <div class="label-sub" id="customerLabelInfo"></div>
     </div>
 </div>
 
@@ -170,10 +212,19 @@
         visibleRef.on('child_added', (snap) => {
             const b = snap.val();
             if (b && b.status === "pending") {
+                printLabels(b.id, b.name, b.items, b.timeIn);
                 showSlotPopup(b.id, b.rack, b.hanger);
             }
         });
     });
+
+    function printLabels(ticketId, name, items, timeIn) {
+        document.querySelectorAll("#printArea .ticket-num").forEach(el => el.innerText = ticketId);
+        JsBarcode(".barcode-garment", ticketId.toString(), { format: "CODE128", displayValue: false, height: 40 });
+        JsBarcode(".barcode-customer", ticketId.toString(), { format: "CODE128", displayValue: false, height: 40 });
+        document.getElementById("customerLabelInfo").innerText = `${name} - ${items} capi - ${timeIn}`;
+        window.print();
+    }
 
     function showSlotPopup(ticketId, rack, hanger) {
         document.getElementById("slotPopupTicket").innerText = "#" + ticketId;
