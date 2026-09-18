@@ -48,21 +48,21 @@
         #slotPopup .slot-location { font-size: 1.3em; margin-top: 15px; line-height: 1.6; }
         #slotPopup button { margin-top: 20px; padding: 10px 30px; border: none; border-radius: 6px; background: #388e3c; color: #fff; font-size: 1em; cursor: pointer; }
 
-        /* Scontrino termico: rotolo largo 80mm, lunghezza fissa 100mm.
-           Per dimensioni diverse cambia i valori qui sotto (in .label) e
-           nel corrispondente @page. */
+        /* Scontrino termico Zebra: 90x100mm (719x799 dot a 203dpi, come da
+           file ZPL fornito). Per dimensioni diverse cambia i valori qui
+           sotto (in .label) e nel corrispondente @page. */
         #printArea { display: none; }
         @media print {
             body * { visibility: hidden; }
             #printArea, #printArea * { visibility: visible; }
             #printArea { display: block; position: absolute; top: 0; left: 0; }
         }
-        @page { size: 80mm 100mm; margin: 0; }
+        @page { size: 90mm 100mm; margin: 0; }
         .label {
-            width: 80mm;
+            width: 90mm;
             height: 100mm;
             box-sizing: border-box;
-            padding: 6mm 4mm;
+            padding: 4mm 5mm;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -72,10 +72,13 @@
             font-family: Arial, sans-serif;
         }
         .label:last-child { page-break-after: auto; }
-        .label-title { font-size: 13pt; font-weight: bold; text-transform: uppercase; }
-        .label-event { font-size: 11pt; margin-top: 2mm; }
-        .label-datetime { font-size: 9pt; color: #555; margin-top: 5mm; }
-        .label-ticket { font-size: 26pt; font-weight: bold; margin-top: 6mm; }
+        .label-tagline { font-size: 12pt; font-weight: bold; font-style: italic; }
+        .label-logo { width: 42mm; margin-top: 3mm; border: 1px solid #ccc; padding: 2mm; }
+        .label-title { font-size: 19pt; font-weight: bold; margin-top: 3mm; }
+        .label-event { font-size: 17pt; font-weight: bold; margin-top: 1mm; }
+        .label-datetime { font-size: 13pt; font-weight: bold; margin-top: 2mm; }
+        .label-ticket { font-size: 13pt; font-weight: bold; margin-top: 2mm; }
+        .label-footer { font-size: 13pt; font-weight: bold; margin-top: 2mm; }
     </style>
     <!-- Firebase -->
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -140,18 +143,24 @@
 
 <div id="printArea">
     <div class="label">
-        <div class="label-title">Hotel PietreNere Resort</div>
+        <div class="label-tagline">&ldquo;Un piccolo mondo, una grande accoglienza&rdquo;</div>
+        <img class="label-logo" src="vivi-logo.png" alt="Vivi la differenza">
+        <div class="label-title">Hotel Pietre Nere Resort</div>
         <div class="label-event">Festa di Capodanno 2026</div>
         <div class="label-datetime printed-at"></div>
-        <div class="label-ticket">#<span class="ticket-num"></span></div>
+        <div class="label-ticket">Ticket N. <span class="ticket-num"></span></div>
         <svg class="barcode-garment"></svg>
+        <div class="label-footer">Copia Cliente</div>
     </div>
     <div class="label">
-        <div class="label-title">Hotel PietreNere Resort</div>
+        <div class="label-tagline">&ldquo;Un piccolo mondo, una grande accoglienza&rdquo;</div>
+        <img class="label-logo" src="vivi-logo.png" alt="Vivi la differenza">
+        <div class="label-title">Hotel Pietre Nere Resort</div>
         <div class="label-event">Festa di Capodanno 2026</div>
         <div class="label-datetime printed-at"></div>
-        <div class="label-ticket">#<span class="ticket-num"></span></div>
+        <div class="label-ticket">Ticket N. <span class="ticket-num"></span></div>
         <svg class="barcode-customer"></svg>
+        <div class="label-footer">Copia Cliente</div>
     </div>
 </div>
 
@@ -227,10 +236,10 @@
     function printLabels(ticketId) {
         document.querySelectorAll("#printArea .ticket-num").forEach(el => el.innerText = ticketId);
         const now = new Date();
-        const printedAt = `${now.toLocaleDateString('it-IT')} - ${now.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}`;
+        const printedAt = `Data ${now.toLocaleDateString('it-IT')} Ora ${now.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}`;
         document.querySelectorAll("#printArea .printed-at").forEach(el => el.innerText = printedAt);
-        JsBarcode(".barcode-garment", ticketId.toString(), { format: "CODE128", displayValue: false, width: 2.5, height: 60 });
-        JsBarcode(".barcode-customer", ticketId.toString(), { format: "CODE128", displayValue: false, width: 2.5, height: 60 });
+        JsBarcode(".barcode-garment", ticketId.toString(), { format: "CODE128", displayValue: true, fontSize: 16, width: 2, height: 50, margin: 4 });
+        JsBarcode(".barcode-customer", ticketId.toString(), { format: "CODE128", displayValue: true, fontSize: 16, width: 2, height: 50, margin: 4 });
         window.print();
     }
 
