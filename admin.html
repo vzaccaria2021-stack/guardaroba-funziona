@@ -62,7 +62,7 @@
             width: 90mm;
             height: 100mm;
             box-sizing: border-box;
-            padding: 4mm 5mm;
+            padding: 3mm 5mm;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -72,18 +72,18 @@
             font-family: Arial, sans-serif;
         }
         .label:last-child { page-break-after: auto; }
-        .label-tagline { font-size: 12pt; font-weight: bold; font-style: italic; }
-        .label-logo { width: 42mm; margin-top: 3mm; border: 1px solid #ccc; padding: 2mm; }
-        .label-title { font-size: 19pt; font-weight: bold; margin-top: 3mm; }
-        .label-event { font-size: 17pt; font-weight: bold; margin-top: 1mm; }
-        .label-datetime { font-size: 13pt; font-weight: bold; margin-top: 2mm; }
-        .label-ticket { font-size: 13pt; font-weight: bold; margin-top: 2mm; }
-        .label-footer { font-size: 13pt; font-weight: bold; margin-top: 2mm; }
+        .label-tagline { font-size: 11pt; font-weight: bold; font-style: italic; }
+        .label-logo { width: 30mm; margin-top: 2mm; border: 1px solid #ccc; padding: 1.5mm; flex-shrink: 0; }
+        .label-title { font-size: 17pt; font-weight: bold; margin-top: 2mm; }
+        .label-event { font-size: 15pt; font-weight: bold; margin-top: 1mm; }
+        .label-datetime { font-size: 12pt; font-weight: bold; margin-top: 1.5mm; }
+        .label-ticket { font-size: 12pt; font-weight: bold; margin-top: 1.5mm; }
+        .label-footer { font-size: 12pt; font-weight: bold; margin-top: 1.5mm; }
 
         /* Etichetta gruccia: solo numero ticket + codice a barre, grande e leggibile */
         .label-ticket-big { font-size: 34pt; font-weight: bold; margin-bottom: 8mm; }
-        .barcode-garment { width: 75mm; }
-        .barcode-customer { width: 75mm; margin-top: 2mm; }
+        .barcode-garment { width: 75mm; flex-shrink: 0; }
+        .barcode-customer { width: 75mm; margin-top: 2mm; flex-shrink: 0; }
     </style>
     <!-- Firebase -->
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
