@@ -79,6 +79,10 @@
         .label-datetime { font-size: 13pt; font-weight: bold; margin-top: 2mm; }
         .label-ticket { font-size: 13pt; font-weight: bold; margin-top: 2mm; }
         .label-footer { font-size: 13pt; font-weight: bold; margin-top: 2mm; }
+
+        /* Etichetta gruccia: solo numero ticket + codice a barre, grande e leggibile */
+        .label-ticket-big { font-size: 34pt; font-weight: bold; margin-bottom: 8mm; }
+        .barcode-garment { width: 75mm; }
     </style>
     <!-- Firebase -->
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -143,14 +147,8 @@
 
 <div id="printArea">
     <div class="label">
-        <div class="label-tagline">&ldquo;Un piccolo mondo, una grande accoglienza&rdquo;</div>
-        <img class="label-logo" src="vivi-logo.png" alt="Vivi la differenza">
-        <div class="label-title">Hotel Pietre Nere Resort</div>
-        <div class="label-event">Festa di Capodanno 2026</div>
-        <div class="label-datetime printed-at"></div>
-        <div class="label-ticket">Ticket N. <span class="ticket-num"></span></div>
+        <div class="label-ticket-big">Ticket n. <span class="ticket-num"></span></div>
         <svg class="barcode-garment"></svg>
-        <div class="label-footer">Copia Cliente</div>
     </div>
     <div class="label">
         <div class="label-tagline">&ldquo;Un piccolo mondo, una grande accoglienza&rdquo;</div>
@@ -238,7 +236,7 @@
         const now = new Date();
         const printedAt = `Data ${now.toLocaleDateString('it-IT')} Ora ${now.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}`;
         document.querySelectorAll("#printArea .printed-at").forEach(el => el.innerText = printedAt);
-        JsBarcode(".barcode-garment", ticketId.toString(), { format: "CODE128", displayValue: true, fontSize: 16, width: 2, height: 50, margin: 4 });
+        JsBarcode(".barcode-garment", ticketId.toString(), { format: "CODE128", displayValue: true, fontSize: 22, width: 3, height: 70, margin: 4 });
         JsBarcode(".barcode-customer", ticketId.toString(), { format: "CODE128", displayValue: true, fontSize: 16, width: 2, height: 50, margin: 4 });
         window.print();
     }
