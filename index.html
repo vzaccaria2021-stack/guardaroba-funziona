@@ -31,9 +31,10 @@
             font-weight: 600; 
             color: #444; 
         }
-        input[type="text"], 
-        input[type="number"], 
-        select { 
+        input[type="text"],
+        input[type="number"],
+        input[type="tel"],
+        select {
             width: 100%; 
             padding: 13px; 
             border: 1.5px solid #ccc; 
@@ -85,12 +86,11 @@
             border-radius: 12px; 
             text-align: center;
         }
-        #currentTicketNum { 
-            font-size: 3.2em; 
-            font-weight: bold; 
-            color: #D32525; 
+        #currentTicketNum {
+            font-size: 3.2em;
+            font-weight: bold;
+            color: #D32525;
         }
-        #status { margin: 15px 0; font-weight: bold; }
     </style>
 
     <!-- Firebase -->
@@ -105,7 +105,7 @@
         <input type="text" id="clientName" placeholder="Mario Rossi">
 
         <label for="customerPhone">Cellulare</label>
-        <input type="number" id="customerPhone" placeholder="393331234567">
+        <input type="tel" inputmode="numeric" id="customerPhone" placeholder="393331234567">
 
         <label for="itemCount">Numero Capi</label>
         <select id="itemCount">
@@ -121,7 +121,7 @@
                 <input type="checkbox" id="privacyConsent" required>
                 <span>
                     <strong>Acconsento</strong> al trattamento di nome e telefono<br>
-                    per ricevere il ticket WhatsApp e gestire il deposito.
+                    per gestire il deposito.
                     <br><br>
                     <small>Dati conservati solo fino al ritiro e cancellati dopo 30 giorni. 
                     <a href="https://www.pietrenereresort.it/privacy/" target="_blank" class="privacy-link">Informativa completa</a></small>
@@ -129,15 +129,11 @@
             </label>
         </div>
 
-        <button onclick="createBooking()">Genera Ticket + Invia WhatsApp</button>
+        <button onclick="createBooking()">Genera Ticket</button>
 
         <div id="result-display" style="display:none;" class="info-section">
             <div>Ticket N°</div>
             <div id="currentTicketNum"></div>
-            <p id="status"></p>
-            <a id="waLink" href="#" target="_blank" style="color:#25D366; font-weight:bold;">
-                Apri WhatsApp (fallback manuale)
-            </a>
         </div>
     </div>
 
@@ -156,45 +152,37 @@
         const bookingsRef = db.ref('prenotazioni');
         const visibleRef = db.ref('prenotazioni_visibili');  // Nodo per admin
         const counterRef = db.ref('counter');
+        const occupiedRef = db.ref('occupiedSlots');
+        const configRef = db.ref('config');
 
-        // WhatsApp Business API - INSERISCI I TUOI
-        const WHATSAPP_TOKEN = "IL_TUO_TOKEN_PERMANENTE";
-        const PHONE_NUMBER_ID = "IL_TUO_PHONE_NUMBER_ID";
-        const TEMPLATE_NAME = "ticket_guardaroba";
-
-        let nextTicketNumber = 1;
-        counterRef.once('value', s => nextTicketNumber = (s.val() || 0) + 1);
-
-        async function sendWhatsAppTemplate(to, name, ticket, items, time) {
-            const url = `https://graph.facebook.com/v20.0/${PHONE_NUMBER_ID}/messages`;
-            const payload = {
-                messaging_product: "whatsapp",
-                to: to,
-                type: "template",
-                template: {
-                    name: TEMPLATE_NAME,
-                    language: { code: "it" },
-                    components: [{
-                        type: "body",
-                        parameters: [
-                            { type: "text", text: name },
-                            { type: "text", text: ticket.toString() },
-                            { type: "text", text: items },
-                            { type: "text", text: time }
-                        ]
-                    }]
+        // Assegna atomicamente il primo appendiabiti/gruccia libero (configurabile
+        // dalla pagina admin), così il posto non lo sceglie l'operatore.
+        async function assignSlot(numRacks, hangersPerRack) {
+            let chosenRack = null, chosenHanger = null;
+            const result = await occupiedRef.transaction(current => {
+                current = current || {};
+                chosenRack = null;
+                chosenHanger = null;
+                slotSearch:
+                for (let r = 1; r <= numRacks; r++) {
+                    for (let h = 1; h <= hangersPerRack; h++) {
+                        const key = `r${r}h${h}`;
+                        if (!current[key]) {
+                            chosenRack = r;
+                            chosenHanger = h;
+                            current[key] = true;
+                            break slotSearch;
+                        }
+                    }
                 }
-            };
-
-            const res = await fetch(url, {
-                method: "POST",
-                headers: { 
-                    "Authorization": `Bearer ${WHATSAPP_TOKEN}`, 
-                    "Content-Type": "application/json" 
-                },
-                body: JSON.stringify(payload)
+                if (chosenRack === null) return; // nessun posto libero: annulla la transazione
+                return current;
             });
-            return res.ok ? {success:true} : {success:false, error: (await res.json()).error?.message || "Errore"};
+
+            if (!result.committed || chosenRack === null) {
+                throw new Error("Nessun posto libero nel guardaroba");
+            }
+            return { rack: chosenRack, hanger: chosenHanger };
         }
 
         async function createBooking() {
@@ -208,14 +196,36 @@
                 return;
             }
 
-            const ticket = nextTicketNumber++;
             const timeIn = new Date().toLocaleTimeString('it-IT', {hour:'2-digit', minute:'2-digit'});
 
+            let rack, hanger;
+            try {
+                const configSnap = await configRef.once('value');
+                const config = configSnap.val() || { numRacks: 5, hangersPerRack: 20 };
+                const assigned = await assignSlot(config.numRacks, config.hangersPerRack);
+                rack = assigned.rack;
+                hanger = assigned.hanger;
+            } catch (e) {
+                alert("Errore: " + e.message);
+                return;
+            }
+
+            let ticket;
+            try {
+                const result = await counterRef.transaction(current => (current || 0) + 1);
+                ticket = result.snapshot.val();
+            } catch (e) {
+                alert("Errore: " + e.message);
+                return;
+            }
+
             const booking = {
-                id: ticket, 
-                name, 
-                phone, 
-                items, 
+                id: ticket,
+                name,
+                phone,
+                items,
+                rack,
+                hanger,
                 timeIn,
                 status: "pending",
                 privacyConsent: true,
@@ -227,6 +237,8 @@
                 id: ticket,
                 name: name,
                 items: items,
+                rack: rack,
+                hanger: hanger,
                 timeIn: timeIn,
                 phone: phone,  // ← CRUCIALE: serve all'admin per inviare messaggio ritiro
                 status: "pending"
@@ -235,21 +247,9 @@
             try {
                 await bookingsRef.child(ticket).set(booking);
                 await visibleRef.child(ticket).set(visibile);
-                await counterRef.set(ticket);
 
                 document.getElementById("currentTicketNum").innerText = ticket;
                 document.getElementById("result-display").style.display = "block";
-                document.getElementById("status").innerHTML = "Invio in corso…";
-
-                const wa = await sendWhatsAppTemplate(phone, name, ticket, items, timeIn);
-
-                document.getElementById("status").innerHTML = wa.success 
-                    ? "Ticket generato e inviato automaticamente!"
-                    : `Errore invio automatico<br><small>Usa il link sotto</small>`;
-                document.getElementById("status").style.color = wa.success ? "#25D366" : "#D32525";
-
-                const msg = `Ciao ${encodeURIComponent(name)}!%0aTicket n° *${ticket}*%0aCapi: ${items}%0aOra deposito: ${timeIn}%0aGrazie e buona serata!`;
-                document.getElementById("waLink").href = `https://wa.me/${phone}?text=${msg}`;
 
                 // Reset form
                 document.getElementById("clientName").value = "";

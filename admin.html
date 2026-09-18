@@ -11,34 +11,155 @@
         h1 { text-align: center; color: #333; }
         .header-stats { display: flex; justify-content: space-around; margin-bottom: 20px; padding: 15px; background-color: #e8f5e9; border-radius: 6px; border: 1px solid #c8e6c9; }
         .stat span { font-size: 2em; font-weight: bold; color: #388e3c; }
-        .search-box { margin: 20px 0; text-align: center; }
-        .search-box input { width: 90%; padding: 12px; font-size: 16px; border-radius: 6px; border: 1px solid #bbb; }
+        .search-box { margin: 20px 0; display: flex; align-items: center; }
+        .search-box input { flex: 1; padding: 12px; font-size: 16px; border-radius: 6px; border: 1px solid #bbb; }
         .booking-item { border: 1px solid #ddd; padding: 15px; margin-bottom: 10px; border-radius: 6px; background: #fff; display: flex; justify-content: space-between; align-items: center; }
         .booking-item.retrieved { background-color: #f1f8e9; opacity: 0.7; }
         .action-button { padding: 8px 15px; background-color: #ff9800; color: #fff; border: none; border-radius: 6px; cursor: pointer; }
         .action-button:hover { background-color: #fb8c00; }
         .retrieved-info { font-size: 0.9em; color: #2e7d32; font-weight: bold; }
         #resetBtn { background-color: #d32f2f; color: #fff; padding: 10px; margin-top:20px; border: none; border-radius: 6px; cursor: pointer; width: 100%; }
+        .rack-info { font-size: 0.9em; color: #555; }
+        #scanBtn { background-color: #1976d2; color: #fff; border: none; border-radius: 6px; padding: 12px 16px; cursor: pointer; margin-left: 8px; }
+        #scanBtn:hover { background-color: #1565c0; }
+        #scanModal {
+            display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+            z-index: 1000; align-items: center; justify-content: center;
+        }
+        #scanModal .scan-panel { background: #fff; padding: 20px; border-radius: 10px; text-align: center; }
+        #scanVideo { width: 300px; height: 225px; background: #000; }
+        #scanModal button { margin-top: 12px; padding: 8px 20px; border: none; border-radius: 6px; background: #d32f2f; color: #fff; cursor: pointer; }
+
+        .settings-box { background: #f0f4ff; border: 1px solid #c3d0f5; border-radius: 8px; padding: 15px; margin-bottom: 20px; }
+        .settings-box h3 { margin: 0 0 10px; font-size: 1em; color: #333; }
+        .settings-row { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
+        .settings-row div { display: flex; flex-direction: column; }
+        .settings-row label { font-size: 0.85em; color: #555; margin-bottom: 4px; }
+        .settings-row input { width: 90px; padding: 8px; border-radius: 6px; border: 1px solid #bbb; }
+        .settings-row button { padding: 9px 16px; border: none; border-radius: 6px; background: #1976d2; color: #fff; cursor: pointer; }
+        .settings-row button:hover { background: #1565c0; }
+
+        #slotPopup {
+            display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75);
+            z-index: 1100; align-items: center; justify-content: center;
+        }
+        #slotPopup .slot-panel { background: #fff; padding: 30px 40px; border-radius: 12px; text-align: center; max-width: 320px; }
+        #slotPopup .slot-ticket { font-size: 2.2em; font-weight: bold; color: #D32525; }
+        #slotPopup .slot-location { font-size: 1.3em; margin-top: 15px; line-height: 1.6; }
+        #slotPopup button { margin-top: 20px; padding: 10px 30px; border: none; border-radius: 6px; background: #388e3c; color: #fff; font-size: 1em; cursor: pointer; }
+
+        /* Scontrino termico Zebra: 90x100mm (719x799 dot a 203dpi, come da
+           file ZPL fornito). Per dimensioni diverse cambia i valori qui
+           sotto (in .label) e nel corrispondente @page. */
+        #printArea { display: none; }
+        @media print {
+            body * { visibility: hidden; }
+            #printArea, #printArea * { visibility: visible; }
+            #printArea { display: block; position: absolute; top: 0; left: 0; }
+        }
+        @page { size: 90mm 100mm; margin: 0; }
+        .label {
+            width: 90mm;
+            height: 100mm;
+            box-sizing: border-box;
+            padding: 3mm 5mm;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            page-break-after: always;
+            text-align: center;
+            font-family: Arial, sans-serif;
+        }
+        .label:last-child { page-break-after: auto; }
+        .label-tagline { font-size: 11pt; font-weight: bold; font-style: italic; }
+        .label-logo { width: 30mm; margin-top: 2mm; border: 1px solid #ccc; padding: 1.5mm; flex-shrink: 0; }
+        .label-title { font-size: 17pt; font-weight: bold; margin-top: 2mm; }
+        .label-event { font-size: 15pt; font-weight: bold; margin-top: 1mm; }
+        .label-datetime { font-size: 12pt; font-weight: bold; margin-top: 1.5mm; }
+        .label-ticket { font-size: 12pt; font-weight: bold; margin-top: 1.5mm; }
+        .label-footer { font-size: 12pt; font-weight: bold; margin-top: 1.5mm; }
+
+        /* Etichetta gruccia: solo numero ticket + codice a barre, grande e leggibile */
+        .label-ticket-big { font-size: 34pt; font-weight: bold; margin-bottom: 8mm; }
+        .barcode-garment { width: 75mm; flex-shrink: 0; }
+        .barcode-customer { width: 75mm; margin-top: 2mm; flex-shrink: 0; }
     </style>
     <!-- Firebase -->
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+    <!-- Scanner via fotocamera (fallback se non c'è un lettore a codice a barre) -->
+    <script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.20.0/umd/index.min.js"></script>
+    <!-- Barcode -->
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
 </head>
 <body>
 <div class="container">
     <div class="dashboard">
         <h1>Dashboard Guardaroba</h1>
+        <div class="settings-box">
+            <h3>Configurazione Guardaroba</h3>
+            <div class="settings-row">
+                <div>
+                    <label for="numRacksInput">Numero Appendiabiti</label>
+                    <input type="number" id="numRacksInput" min="1">
+                </div>
+                <div>
+                    <label for="hangersPerRackInput">Grucce per Appendiabiti</label>
+                    <input type="number" id="hangersPerRackInput" min="1">
+                </div>
+                <button onclick="saveConfig()">Salva</button>
+            </div>
+        </div>
         <div class="header-stats">
             <div class="stat">Totali: <span id="totalBookings">0</span></div>
             <div class="stat">Da ritirare: <span id="pendingBookings">0</span></div>
             <div class="stat">Ritirati: <span id="retrievedBookings">0</span></div>
         </div>
         <div class="search-box">
-            <input type="text" id="searchInput" placeholder="Cerca per numero ticket o nome..." oninput="renderBookingList()">
+            <input type="text" id="searchInput" placeholder="Cerca, o scansiona il codice a barre..." oninput="renderBookingList()" autofocus>
+            <button id="scanBtn" onclick="openScanModal()">📷 Scansiona</button>
         </div>
         <h2>Lista Prenotazioni</h2>
         <div id="activeBookingsList"></div>
         <button id="resetBtn" onclick="resetDayCounter()">Resetta Tutto (cancella prenotazioni)</button>
+    </div>
+</div>
+
+<div id="scanModal">
+    <div class="scan-panel">
+        <video id="scanVideo"></video>
+        <br>
+        <button onclick="closeScanModal()">Chiudi</button>
+    </div>
+</div>
+
+<div id="slotPopup">
+    <div class="slot-panel">
+        <div>Ticket</div>
+        <div class="slot-ticket" id="slotPopupTicket"></div>
+        <div class="slot-location">
+            Appendiabiti <strong id="slotPopupRack"></strong><br>
+            Gruccia <strong id="slotPopupHanger"></strong>
+        </div>
+        <button onclick="closeSlotPopup()">OK</button>
+    </div>
+</div>
+
+<div id="printArea">
+    <div class="label">
+        <div class="label-ticket-big">Ticket n. <span class="ticket-num"></span></div>
+        <svg class="barcode-garment"></svg>
+    </div>
+    <div class="label">
+        <div class="label-tagline">&ldquo;Un piccolo mondo, una grande accoglienza&rdquo;</div>
+        <img class="label-logo" src="vivi-logo.png" alt="Vivi la differenza">
+        <div class="label-title">Hotel Pietre Nere Resort</div>
+        <div class="label-event">Festa di Capodanno 2026</div>
+        <div class="label-datetime printed-at"></div>
+        <div class="label-ticket">Ticket N. <span class="ticket-num"></span></div>
+        <svg class="barcode-customer"></svg>
+        <div class="label-footer">Copia Cliente</div>
     </div>
 </div>
 
@@ -57,14 +178,37 @@
 
     const visibleRef = db.ref('prenotazioni_visibili');
     const counterRef = db.ref('counter');
+    const occupiedRef = db.ref('occupiedSlots');
+    const configRef = db.ref('config');
 
     let allBookings = [];
     let currentCounter = 0;
 
     counterRef.on('value', (snap) => {
         currentCounter = snap.val() || 0;
-        updateStats();
+        renderBookingList();
     });
+
+    configRef.on('value', (snap) => {
+        const config = snap.val() || { numRacks: 5, hangersPerRack: 20 };
+        document.getElementById("numRacksInput").value = config.numRacks;
+        document.getElementById("hangersPerRackInput").value = config.hangersPerRack;
+    });
+
+    async function saveConfig() {
+        const numRacks = parseInt(document.getElementById("numRacksInput").value, 10);
+        const hangersPerRack = parseInt(document.getElementById("hangersPerRackInput").value, 10);
+        if (!numRacks || !hangersPerRack) {
+            alert("Inserisci valori validi per appendiabiti e grucce");
+            return;
+        }
+        try {
+            await configRef.set({ numRacks, hangersPerRack });
+            alert("Configurazione salvata");
+        } catch (e) {
+            alert("Errore: " + e.message);
+        }
+    }
 
     visibleRef.on('value', (snapshot) => {
         allBookings = [];
@@ -75,10 +219,45 @@
         renderBookingList();
     });
 
+    // Popup automatico: avvisa dove appendere il capo appena arriva una nuova
+    // prenotazione. Aspetta il caricamento iniziale per non mostrare un popup
+    // per ogni prenotazione già esistente al primo avvio della pagina.
+    visibleRef.once('value').then(() => {
+        visibleRef.on('child_added', (snap) => {
+            const b = snap.val();
+            if (b && b.status === "pending") {
+                printLabels(b.id);
+                showSlotPopup(b.id, b.rack, b.hanger);
+            }
+        });
+    });
+
+    function printLabels(ticketId) {
+        document.querySelectorAll("#printArea .ticket-num").forEach(el => el.innerText = ticketId);
+        const now = new Date();
+        const printedAt = `Data ${now.toLocaleDateString('it-IT')} Ora ${now.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}`;
+        document.querySelectorAll("#printArea .printed-at").forEach(el => el.innerText = printedAt);
+        JsBarcode(".barcode-garment", ticketId.toString(), { format: "CODE128", displayValue: true, fontSize: 22, width: 3, height: 70, margin: 4 });
+        JsBarcode(".barcode-customer", ticketId.toString(), { format: "CODE128", displayValue: true, fontSize: 20, width: 3, height: 65, margin: 4 });
+        window.print();
+    }
+
+    function showSlotPopup(ticketId, rack, hanger) {
+        document.getElementById("slotPopupTicket").innerText = "#" + ticketId;
+        document.getElementById("slotPopupRack").innerText = rack ?? "?";
+        document.getElementById("slotPopupHanger").innerText = hanger ?? "?";
+        document.getElementById("slotPopup").style.display = "flex";
+    }
+
+    function closeSlotPopup() {
+        document.getElementById("slotPopup").style.display = "none";
+        document.getElementById("searchInput").focus();
+    }
+
     function renderBookingList() {
         const search = document.getElementById("searchInput").value.toLowerCase();
         const filtered = allBookings.filter(b =>
-            b.name.toLowerCase().includes(search) || b.id.toString().includes(search)
+            (b.name || '').toLowerCase().includes(search) || (b.id ?? '').toString().includes(search)
         );
 
         const pending = filtered.filter(b => b.status === "pending").length;
@@ -100,11 +279,12 @@
                 <div>
                     <strong>Ticket #${b.id} (${b.items} capi)</strong><br>
                     ${b.name} – <strong>${b.phone || 'Non disponibile'}</strong><br>
-                    <small>Ingresso: ${b.timeIn}</small>
+                    <small>Ingresso: ${b.timeIn}</small><br>
+                    <span class="rack-info">Appendiabiti ${b.rack ?? '?'} · Gruccia ${b.hanger ?? '?'}</span>
                 </div>
                 <div>
                     ${b.status === "pending"
-                        ? `<button class="action-button" onclick="markRetrieved('${b.key}', ${b.id})">Ritirato</button>`
+                        ? `<button class="action-button" onclick="markRetrieved('${b.key}', ${b.id}, ${b.rack}, ${b.hanger})">Ritirato</button>`
                         : `<span class="retrieved-info">Ritirato alle ${b.timeOut}</span>`
                     }
                 </div>
@@ -117,7 +297,7 @@
         }
     }
 
-    async function markRetrieved(key, ticketId) {
+    async function markRetrieved(key, ticketId, rack, hanger) {
         if (!confirm(`Confermi il ritiro del Ticket #${ticketId}?`)) return;
 
         const now = new Date();
@@ -125,9 +305,45 @@
 
         try {
             await visibleRef.child(key).update({ status: "retrieved", timeOut: timeOut });
+            await occupiedRef.child(`r${rack}h${hanger}`).remove();
+            document.getElementById("searchInput").value = "";
+            renderBookingList();
         } catch (e) {
             alert("Errore: " + e.message);
+        } finally {
+            document.getElementById("searchInput").focus();
         }
+    }
+
+    // Scansione da fotocamera: fallback quando non è disponibile un lettore
+    // di codici a barre USB/Bluetooth (che invece scrive direttamente nel
+    // campo di ricerca, senza bisogno di codice dedicato).
+    let scanCodeReader = null;
+
+    async function openScanModal() {
+        document.getElementById("scanModal").style.display = "flex";
+        scanCodeReader = new ZXing.BrowserMultiFormatReader();
+        try {
+            await scanCodeReader.decodeFromVideoDevice(null, "scanVideo", (result, err) => {
+                if (result) {
+                    document.getElementById("searchInput").value = result.getText();
+                    renderBookingList();
+                    closeScanModal();
+                }
+            });
+        } catch (e) {
+            alert("Errore fotocamera: " + e.message);
+            closeScanModal();
+        }
+    }
+
+    function closeScanModal() {
+        if (scanCodeReader) {
+            scanCodeReader.reset();
+            scanCodeReader = null;
+        }
+        document.getElementById("scanModal").style.display = "none";
+        document.getElementById("searchInput").focus();
     }
 
     async function resetDayCounter() {
@@ -136,6 +352,7 @@
         try {
             await visibleRef.remove();
             await counterRef.set(0);
+            await occupiedRef.remove();
             alert("Tutto resettato!");
         } catch (e) {
             alert("Errore reset: " + e.message);
